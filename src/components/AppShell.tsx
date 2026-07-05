@@ -1,0 +1,67 @@
+import { NavLink, useNavigate } from "react-router-dom";
+import { ReactNode } from "react";
+import { Bell, Building2, LayoutDashboard, LogOut, Settings, Wrench } from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+
+const studentNav = [
+  { to: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
+  { to: "/accommodation", label: "Accommodation", Icon: Building2 },
+];
+
+const adminNav = [
+  { to: "/admin", label: "Overview", Icon: LayoutDashboard },
+  { to: "/accommodation", label: "Inventory", Icon: Building2 },
+];
+
+export function AppShell({ children, title }: { children: ReactNode; title: string }) {
+  const { role, signOut, user } = useAuth();
+  const nav = useNavigate();
+  const items = role === "admin" ? adminNav : studentNav;
+
+  return (
+    <div className="min-h-screen bg-surface flex">
+      <aside className="hidden md:flex w-60 flex-col border-r border-border bg-white">
+        <div className="h-16 flex items-center px-6 border-b border-border"><Logo /></div>
+        <nav className="p-3 space-y-1 flex-1">
+          {items.map(({ to, label, Icon }) => (
+            <NavLink key={to} to={to} end
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive ? "bg-leaf-50 text-leaf-700" : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                }`
+              }>
+              <Icon className="size-4" /> {label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="p-3 border-t border-border">
+          <div className="px-3 py-2 text-xs">
+            <p className="font-medium truncate">{user?.email}</p>
+            <p className="text-muted-foreground capitalize">{role}</p>
+          </div>
+          <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground" onClick={async () => { await signOut(); nav("/"); }}>
+            <LogOut className="size-4" /> Sign out
+          </Button>
+        </div>
+      </aside>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-16 border-b border-border bg-white/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
+          <div>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">CampusStay</p>
+            <h1 className="text-lg font-semibold">{title}</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon"><Bell className="size-4" /></Button>
+            <Button variant="ghost" size="icon" className="md:hidden" onClick={async () => { await signOut(); nav("/"); }}>
+              <LogOut className="size-4" />
+            </Button>
+          </div>
+        </header>
+        <main className="p-4 md:p-8 flex-1">{children}</main>
+      </div>
+    </div>
+  );
+}

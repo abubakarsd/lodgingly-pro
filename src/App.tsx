@@ -1,12 +1,25 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
+import StudentDashboard from "./pages/StudentDashboard";
+import Accommodation from "./pages/Accommodation";
+import AdminDashboard from "./pages/AdminDashboard";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+function Protected({ children, admin = false }: { children: JSX.Element; admin?: boolean }) {
+  const { user, role, loading } = useAuth();
+  if (loading) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
+  if (!user) return <Navigate to="/auth" replace />;
+  if (admin && role !== "admin") return <Navigate to="/dashboard" replace />;
+  return children;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -14,11 +27,16 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<Protected><StudentDashboard /></Protected>} />
+            <Route path="/accommodation" element={<Protected><Accommodation /></Protected>} />
+            <Route path="/admin" element={<Protected admin><AdminDashboard /></Protected>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

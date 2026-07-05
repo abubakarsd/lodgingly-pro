@@ -14,16 +14,346 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      allocations: {
+        Row: {
+          allocated_at: string
+          bed_label: string
+          created_at: string
+          id: string
+          room_id: string
+          status: Database["public"]["Enums"]["allocation_status"]
+          student_id: string
+          term: string
+        }
+        Insert: {
+          allocated_at?: string
+          bed_label: string
+          created_at?: string
+          id?: string
+          room_id: string
+          status?: Database["public"]["Enums"]["allocation_status"]
+          student_id: string
+          term: string
+        }
+        Update: {
+          allocated_at?: string
+          bed_label?: string
+          created_at?: string
+          id?: string
+          room_id?: string
+          status?: Database["public"]["Enums"]["allocation_status"]
+          student_id?: string
+          term?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allocations_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blocks: {
+        Row: {
+          created_at: string
+          floors: number
+          hostel_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          floors?: number
+          hostel_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          floors?: number
+          hostel_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocks_hostel_id_fkey"
+            columns: ["hostel_id"]
+            isOneToOne: false
+            referencedRelation: "hostels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clearance_items: {
+        Row: {
+          created_at: string
+          id: string
+          item: string
+          status: Database["public"]["Enums"]["clearance_status"]
+          student_id: string
+          updated_at: string
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item: string
+          status?: Database["public"]["Enums"]["clearance_status"]
+          student_id: string
+          updated_at?: string
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item?: string
+          status?: Database["public"]["Enums"]["clearance_status"]
+          student_id?: string
+          updated_at?: string
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
+      complaints: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          priority: Database["public"]["Enums"]["complaint_priority"]
+          status: Database["public"]["Enums"]["complaint_status"]
+          student_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          priority?: Database["public"]["Enums"]["complaint_priority"]
+          status?: Database["public"]["Enums"]["complaint_status"]
+          student_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          priority?: Database["public"]["Enums"]["complaint_priority"]
+          status?: Database["public"]["Enums"]["complaint_status"]
+          student_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hostels: {
+        Row: {
+          campus: string | null
+          created_at: string
+          description: string | null
+          gender: Database["public"]["Enums"]["hostel_gender"]
+          id: string
+          image_url: string | null
+          name: string
+        }
+        Insert: {
+          campus?: string | null
+          created_at?: string
+          description?: string | null
+          gender?: Database["public"]["Enums"]["hostel_gender"]
+          id?: string
+          image_url?: string | null
+          name: string
+        }
+        Update: {
+          campus?: string | null
+          created_at?: string
+          description?: string | null
+          gender?: Database["public"]["Enums"]["hostel_gender"]
+          id?: string
+          image_url?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          room_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          room_id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          room_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          read: boolean
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          matric_number: string | null
+          phone: string | null
+          program: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          matric_number?: string | null
+          phone?: string | null
+          program?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          matric_number?: string | null
+          phone?: string | null
+          program?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rooms: {
+        Row: {
+          block_id: string
+          capacity: number
+          created_at: string
+          id: string
+          price_per_term: number
+          room_number: string
+          room_type: string
+        }
+        Insert: {
+          block_id: string
+          capacity?: number
+          created_at?: string
+          id?: string
+          price_per_term?: number
+          room_number: string
+          room_type?: string
+        }
+        Update: {
+          block_id?: string
+          capacity?: number
+          created_at?: string
+          id?: string
+          price_per_term?: number
+          room_number?: string
+          room_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      allocation_status: "active" | "expired" | "cancelled"
+      app_role: "student" | "admin"
+      clearance_status: "pending" | "verified" | "rejected"
+      complaint_priority: "low" | "medium" | "high"
+      complaint_status: "open" | "in_progress" | "resolved" | "closed"
+      hostel_gender: "male" | "female" | "mixed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +480,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      allocation_status: ["active", "expired", "cancelled"],
+      app_role: ["student", "admin"],
+      clearance_status: ["pending", "verified", "rejected"],
+      complaint_priority: ["low", "medium", "high"],
+      complaint_status: ["open", "in_progress", "resolved", "closed"],
+      hostel_gender: ["male", "female", "mixed"],
+    },
   },
 } as const

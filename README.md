@@ -131,40 +131,45 @@ auth.users                  ← managed by Supabase Auth
 
 ---
 
-## ☁️ Option A: Supabase Cloud (Online)
+## ☁️ Option A: Supabase Cloud (Online) - Recommended
 
 ### 1. Create a Supabase project
 
-1. Go to [https://supabase.com](https://supabase.com) and sign in
-2. Click **New Project** and fill in the details
-3. Wait for the project to provision (~2 minutes)
+1. Go to [https://supabase.com](https://supabase.com) and sign in.
+2. Click **New Project** and fill in the details (save your Database Password securely).
+3. Wait for the project to provision (~2 minutes).
 
 ### 2. Get your credentials
 
 In your Supabase dashboard → **Project Settings → API**:
+- Copy **Project URL** → `VITE_SUPABASE_URL` in your `.env`
+- Copy **anon / public key** → `VITE_SUPABASE_PUBLISHABLE_KEY` in your `.env`
+- The `VITE_SUPABASE_PROJECT_ID` is just the subdomain part of your URL (e.g., `swtoxbvvbxhvfucxdcwc`).
 
-- Copy **Project URL** → `VITE_SUPABASE_URL`
-- Copy **anon / public key** → `VITE_SUPABASE_PUBLISHABLE_KEY`
+### 3. Log in to the Supabase CLI
 
-Paste them into your `.env` file.
-
-### 3. Apply the database migrations
-
-Install the Supabase CLI if you haven't:
-
-```bash
-brew install supabase/tap/supabase
-```
-
-Link your project and push migrations:
+You must log in to the CLI to prove you have access to your Supabase account:
 
 ```bash
 supabase login
-supabase link --project-ref your-project-ref
-supabase db push
 ```
+*This will open a browser window and generate a token for your terminal.*
 
-Or copy-paste the SQL files from `supabase/migrations/` directly into the **SQL Editor** in your Supabase dashboard.
+### 4. Link and Migrate the Database
+
+Link your local project to your newly created Supabase cloud project:
+
+```bash
+supabase link --project-ref <your-project-id>
+```
+*(When prompted, paste the Database Password you created in Step 1).*
+
+Finally, push all the database tables, roles, and initial seed data to the cloud. If you are starting fresh, it is safest to run a reset to ensure all migrations apply cleanly:
+
+```bash
+supabase db reset --linked
+```
+*(Press `y` when it asks if you want to reset the remote database).*
 
 ---
 
@@ -246,9 +251,9 @@ psql -U postgres -c "CREATE DATABASE abu_hostel;"
 ### 2. Apply the schema manually
 
 ```bash
-psql -U postgres -d abu_hostel -f supabase/migrations/20260705081135_4f586063-5832-42c9-9f92-35b5dfe9a45f.sql
-psql -U postgres -d abu_hostel -f supabase/migrations/20260705081143_1d6960ff-68eb-4939-90ac-6a8612b3bc2b.sql
-psql -U postgres -d abu_hostel -f supabase/migrations/20260709091456_9feeadfd-49af-40ec-b673-4fab8234d8d9.sql
+psql -U postgres -d abu_hostel -f supabase/migrations/20260705081135_initial_schema.sql
+psql -U postgres -d abu_hostel -f supabase/migrations/20260705081143_revoke_public_exec.sql
+psql -U postgres -d abu_hostel -f supabase/migrations/20260709091456_admin_profile_policy.sql
 ```
 
 ### 3. Note

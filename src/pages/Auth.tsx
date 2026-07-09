@@ -13,41 +13,74 @@ import bgImage from "@/assets/bg-image.jpeg";
 export default function Auth() {
   const nav = useNavigate();
   const { user, role, loading } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+
+  // Student states
+  const [regNumber, setRegNumber] = useState("");
+  const [studentPassword, setStudentPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [isStudentSignup, setIsStudentSignup] = useState(false);
+
+  // Admin states
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!loading && user) nav(role === "admin" ? "/admin" : "/dashboard", { replace: true });
   }, [user, role, loading, nav]);
 
-  async function signIn(e: React.FormEvent) {
+  const getStudentEmail = (reg: string) => {
+    // Supabase strict email validation will reject spaces and slashes (e.g. U19/CS/1000)
+    // So we strip all non-alphanumeric characters for the hidden email format
+    const safeReg = reg.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    return `${safeReg}@student.abu.edu.ng`;
+  };
+
+  async function studentSignIn(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: getStudentEmail(regNumber),
+      password: studentPassword
+    });
     setBusy(false);
     if (error) toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
   }
 
-  async function signUp(e: React.FormEvent) {
+  async function studentSignUp(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard`, data: { full_name: fullName } },
+    const generatedEmail = getStudentEmail(regNumber);
+    console.log("Attempting signup with generated email:", generatedEmail);
+    const { error, data } = await supabase.auth.signUp({
+      email: generatedEmail,
+      password: studentPassword,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+        data: { full_name: fullName, matric_number: regNumber.trim().toUpperCase() }
+      },
     });
+
+    if (!error && data.user) {
+      // Best effort to update matric_number in the profile created by the trigger
+      await supabase.from("profiles").update({ matric_number: regNumber.trim().toUpperCase() }).eq("id", data.user.id);
+    }
+
     setBusy(false);
     if (error) toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
     else toast({ title: "Welcome!", description: "Your account is ready." });
   }
 
-  async function google() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
+  async function adminSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: adminEmail,
+      password: adminPassword
     });
-    if (error) toast({ title: "Google sign-in failed", description: error.message, variant: "destructive" });
+    setBusy(false);
+    if (error) toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
   }
 
   return (
@@ -71,40 +104,68 @@ export default function Auth() {
         <div className="flex-1 grid place-items-center">
           <div className="w-full max-w-sm">
             <h1 className="text-2xl font-semibold tracking-tight">Portal access</h1>
-            <p className="text-sm text-muted-foreground mt-1">Students and administrators sign in here.</p>
+            <p className="text-sm text-muted-foreground mt-1">Select your portal to continue.</p>
 
-            <Tabs defaultValue="signin" className="mt-8">
+            <Tabs defaultValue="student" className="mt-8">
               <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="signin">Sign in</TabsTrigger>
-                <TabsTrigger value="signup">Create account</TabsTrigger>
+                <TabsTrigger value="student">Student</TabsTrigger>
+                <TabsTrigger value="admin">Administrator</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="signin" className="mt-6">
-                <form onSubmit={signIn} className="space-y-4">
-                  <div className="space-y-2"><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Password</Label><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-                  <Button disabled={busy} type="submit" className="w-full">Sign in</Button>
-                </form>
+              <TabsContent value="student" className="mt-6">
+                {!isStudentSignup ? (
+                  <form onSubmit={studentSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Registration Number</Label>
+                      <Input required placeholder="e.g. U16CSC206" value={regNumber} onChange={(e) => setRegNumber(e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Password</Label>
+                      <Input type="password" required value={studentPassword} onChange={(e) => setStudentPassword(e.target.value)} />
+                    </div>
+                    <Button disabled={busy} type="submit" className="w-full">Sign in as Student</Button>
+                    <p className="text-center text-sm text-muted-foreground mt-4">
+                      New student? <button type="button" onClick={() => setIsStudentSignup(true)} className="text-leaf-600 hover:underline">Create an account</button>
+                    </p>
+                  </form>
+                ) : (
+                  <form onSubmit={studentSignUp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Full name</Label>
+                      <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Registration Number</Label>
+                      <Input required placeholder="e.g. U16CSC206" value={regNumber} onChange={(e) => setRegNumber(e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Password</Label>
+                      <Input type="password" required minLength={6} value={studentPassword} onChange={(e) => setStudentPassword(e.target.value)} />
+                    </div>
+                    <Button disabled={busy} type="submit" className="w-full">Create Student Account</Button>
+                    <p className="text-center text-sm text-muted-foreground mt-4">
+                      Already have an account? <button type="button" onClick={() => setIsStudentSignup(false)} className="text-leaf-600 hover:underline">Sign in</button>
+                    </p>
+                  </form>
+                )}
               </TabsContent>
 
-              <TabsContent value="signup" className="mt-6">
-                <form onSubmit={signUp} className="space-y-4">
-                  <div className="space-y-2"><Label>Full name</Label><Input required value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Password</Label><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-                  <Button disabled={busy} type="submit" className="w-full">Create account</Button>
+              <TabsContent value="admin" className="mt-6">
+                <form onSubmit={adminSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Admin Email</Label>
+                    <Input type="email" required placeholder="admin@abu.edu.ng" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password</Label>
+                    <Input type="password" required value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
+                  </div>
+                  <Button disabled={busy} type="submit" className="w-full">Sign in as Admin</Button>
                 </form>
               </TabsContent>
             </Tabs>
 
-            <div className="flex items-center gap-4 my-6">
-              <div className="h-px flex-1 bg-border" /><span className="text-xs text-muted-foreground">OR</span><div className="h-px flex-1 bg-border" />
-            </div>
-            <Button variant="outline" className="w-full" onClick={google}>
-              <svg viewBox="0 0 24 24" className="size-4 mr-2"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.4-1.6 4-5.5 4-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.4 14.7 2.4 12 2.4 6.7 2.4 2.4 6.7 2.4 12S6.7 21.6 12 21.6c6.9 0 9.6-4.8 9.6-8.5 0-.6-.1-1.1-.2-1.5H12z" /></svg>
-              Continue with Google
-            </Button>
-            <p className="text-center text-xs text-muted-foreground mt-6">
+            <p className="text-center text-xs text-muted-foreground mt-8">
               <Link to="/" className="hover:text-foreground">← Back to home</Link>
             </p>
           </div>

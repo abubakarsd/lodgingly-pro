@@ -5,14 +5,15 @@ import heroEmerald from "@/assets/hostel-emerald.jpg";
 import verdant from "@/assets/hostel-verdant.jpg";
 import cedar from "@/assets/hostel-cedar.jpg";
 import ivy from "@/assets/hostel-ivy.jpg";
+import bgImage from "@/assets/bg-image.jpeg";
 
 const blocks = [
   { name: "Umar Sulaim Hostel", meta: "North Campus • Male", img: heroEmerald },
   { name: "Amina Hostel", meta: "South Campus • Female", img: verdant },
-  { name: "Ribadu Hostel", meta: "Central Campus • Male", img: cedar },
-  { name: "Sakawa Hostel", meta: "East Campus • Male", img: ivy },
+  { name: "Ribadu Hostel", meta: "Central Campus • Female", img: cedar },
+  { name: "Sakawa Hostel", meta: "East Campus • Female", img: ivy },
   { name: "Danfodio Hostel", meta: "West Campus • Male", img: heroEmerald },
-  { name: "Dangote Hostel", meta: "North Campus • Mixed", img: verdant },
+  { name: "Dangote Hostel", meta: "North Campus • Male", img: verdant },
 ];
 
 export default function Landing() {
@@ -37,72 +38,80 @@ export default function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="pt-16 md:pt-20 pb-12 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="relative pt-24 md:pt-32 pb-20 overflow-hidden bg-black text-white">
+        {/* Sliding Background */}
+        <div 
+          className="absolute inset-0 z-0 animate-slide-bg opacity-40 bg-cover bg-center"
+          style={{ backgroundImage: `url(${bgImage})` }}
+        ></div>
+        
+        {/* Particles */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          {Array.from({ length: 15 }).map((_, i) => (
+            <div 
+              key={i} 
+              className="particle"
+              style={{
+                left: `${Math.random() * 100}%`,
+                width: `${Math.random() * 20 + 10}px`,
+                height: `${Math.random() * 20 + 10}px`,
+                animationDelay: `${Math.random() * 10}s`,
+                animationDuration: `${Math.random() * 10 + 15}s`
+              }}
+            ></div>
+          ))}
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="flex flex-col items-center text-center animate-fade-up">
-            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-foreground max-w-[24ch] text-balance leading-tight">
-              University living, managed with digital precision.
+            <div className="inline-flex items-center rounded-full border border-leaf-500/30 bg-leaf-500/10 px-3 py-1 text-sm text-leaf-300 backdrop-blur-sm mb-6">
+              <span className="flex h-2 w-2 rounded-full bg-leaf-500 mr-2"></span>
+              Computer Science Final Year Project — Diploma Iya Abubakar
+            </div>
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight max-w-[20ch] text-balance leading-tight drop-shadow-md">
+              Ahmadu Bello University Hostel Management System
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground max-w-[56ch] text-pretty">
-              A centralized platform for student housing. Browse modern hostel blocks, manage your residency, and resolve maintenance requests in a single interface.
+            <p className="mt-6 text-lg md:text-xl text-zinc-300 max-w-[56ch] text-pretty drop-shadow">
+              A centralized digital platform for ABU students. Browse hostels, pay securely for your room, lodge maintenance complaints, and print clearance forms online.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3 justify-center">
-              <Link to="/auth" className="bg-leaf-600 text-white py-2.5 pr-4 pl-3.5 rounded-lg text-sm font-medium ring-1 ring-leaf-600 flex items-center gap-2 hover:bg-leaf-700 transition-colors">
-                <ArrowRight className="size-4" /> Browse Hostels
+            <div className="mt-10 flex flex-wrap gap-4 justify-center">
+              <Link to="/auth" className="bg-leaf-600 text-white py-3 pr-5 pl-4 rounded-xl text-base font-medium ring-1 ring-leaf-500 flex items-center gap-2 hover:bg-leaf-500 transition-colors shadow-lg shadow-leaf-600/20">
+                <ArrowRight className="size-5" /> Get Started
               </Link>
-              <a href="#residences" className="bg-white text-foreground py-2.5 px-4 rounded-lg text-sm font-medium ring-1 ring-border hover:bg-surface transition-colors">View Residences</a>
+              <a href="#how-it-works" className="bg-white/10 text-white py-3 px-6 rounded-xl text-base font-medium ring-1 ring-white/20 hover:bg-white/20 transition-colors backdrop-blur-sm">
+                Learn More
+              </a>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Dashboard preview */}
-          <div className="mt-16 md:mt-20 relative mx-auto max-w-5xl rounded-t-2xl ring-1 ring-black/5 shadow-2xl bg-surface p-3 md:p-4 pb-0 animate-fade-up">
-            <div className="bg-white rounded-t-xl overflow-hidden border border-border">
-              <div className="h-12 border-b border-border bg-surface/70 flex items-center px-4 justify-between">
-                <div className="flex gap-1.5">
-                  <div className="size-2.5 rounded-full bg-muted"></div>
-                  <div className="size-2.5 rounded-full bg-muted"></div>
-                  <div className="size-2.5 rounded-full bg-muted"></div>
+      {/* How It Works */}
+      <section id="how-it-works" className="py-20 md:py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-semibold tracking-tight">Accommodation Process</h2>
+            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Follow these simple steps to secure your room at ABU Zaria hostels.</p>
+          </div>
+          
+          <div className="grid md:grid-cols-4 gap-8 relative">
+            {/* Connecting line for desktop */}
+            <div className="hidden md:block absolute top-8 left-[10%] right-[10%] h-0.5 bg-leaf-100 z-0"></div>
+            
+            {[
+              { step: "01", title: "Select a Hostel", desc: "Browse available ABU hostels (e.g., Umar Sulaiman, Amina) and check room capacities." },
+              { step: "02", title: "Reserve & Pay", desc: "Choose your preferred block and room. Securely pay online to own your bed space." },
+              { step: "03", title: "Print Forms", desc: "Instantly generate and print your official accommodation form from your dashboard." },
+              { step: "04", title: "Move In & Clear", desc: "Settle into your room. At the end of the session, print your clearance form online." }
+            ].map((s, i) => (
+              <div key={i} className="relative z-10 flex flex-col items-center text-center">
+                <div className="w-16 h-16 rounded-full bg-white border-4 border-leaf-50 text-leaf-600 font-bold text-xl flex items-center justify-center shadow-sm mb-6">
+                  {s.step}
                 </div>
-                <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">Student Portal / Dashboard</div>
-                <div className="size-4"></div>
+                <h3 className="text-lg font-medium mb-2">{s.title}</h3>
+                <p className="text-sm text-muted-foreground text-pretty">{s.desc}</p>
               </div>
-              <div className="p-4 md:p-6 grid grid-cols-12 gap-4 md:gap-6">
-                <div className="col-span-12 md:col-span-8 space-y-4 md:space-y-6">
-                  <div className="bg-leaf-50 rounded-xl p-5 border border-leaf-100">
-                    <div className="flex justify-between items-start gap-4">
-                      <div>
-                        <span className="text-[10px] font-semibold text-leaf-700 uppercase tracking-wider">Active Allocation</span>
-                        <h3 className="text-xl font-medium text-leaf-900 mt-1">Emerald Hall, Block A</h3>
-                        <p className="text-sm text-leaf-700/70 mt-1">Room 402 • Shared Ensuite • Bed A</p>
-                      </div>
-                      <div className="bg-white px-3 py-1 rounded-full text-[11px] font-semibold text-leaf-700 ring-1 ring-leaf-100 whitespace-nowrap">Term Active</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl border border-border">
-                      <span className="text-[11px] font-medium text-muted-foreground uppercase">Clearance</span>
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="size-2 rounded-full bg-leaf-500"></div>
-                        <span className="text-sm font-medium">Fully Cleared</span>
-                      </div>
-                    </div>
-                    <div className="p-4 rounded-xl border border-border">
-                      <span className="text-[11px] font-medium text-muted-foreground uppercase">Maintenance</span>
-                      <div className="mt-2 text-sm font-medium">0 Active Tickets</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-span-12 md:col-span-4 space-y-4">
-                  <div className="p-4 rounded-xl border border-border bg-surface/40">
-                    <h4 className="text-xs font-semibold">Roommates</h4>
-                    <div className="mt-3 space-y-3">
-                      <div className="flex items-center gap-3"><div className="size-7 rounded-full bg-muted"></div><div className="text-xs font-medium">Marcus Chen</div></div>
-                      <div className="flex items-center gap-3"><div className="size-7 rounded-full bg-muted"></div><div className="text-xs font-medium">Julian Vane</div></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -112,9 +121,9 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-10 md:gap-12">
             {[
-              { Icon: MapPin, t: "Smart Allocation", d: "Our algorithm pairs roommates based on lifestyle preferences and academic discipline for a harmonious living environment." },
-              { Icon: ShieldCheck, t: "Digital Clearance", d: "Skip the administrative queues. Complete move-in and move-out clearance forms directly from your dashboard." },
-              { Icon: MessagesSquare, t: "Instant Communication", d: "Direct chat channels with your floor wardens and roommates. Stay updated with real-time housing notifications." },
+              { Icon: MapPin, t: "Real-time Accommodation", d: "View exactly how many people are in a room and available bed spaces before you make a payment." },
+              { Icon: ShieldCheck, t: "Printable Forms", d: "Generate your accommodation form instantly after payment, and print your clearance form at the end of the session." },
+              { Icon: MessagesSquare, t: "Online Complaints", d: "Experiencing an issue? Lodge a maintenance complaint online and track its resolution status from your dashboard." },
             ].map(({ Icon, t, d }) => (
               <div key={t}>
                 <div className="size-10 bg-leaf-100 rounded-lg flex items-center justify-center mb-6">

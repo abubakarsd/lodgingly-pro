@@ -7,10 +7,12 @@ import cedar from "@/assets/hostel-cedar.jpg";
 import ivy from "@/assets/hostel-ivy.jpg";
 
 const blocks = [
-  { name: "Emerald Hall", meta: "North Campus • 120 Beds available", img: heroEmerald },
-  { name: "Verdant Wing", meta: "South Campus • 45 Beds available", img: verdant },
-  { name: "Cedar Commons", meta: "Central Campus • 12 Beds available", img: cedar },
-  { name: "Ivy Pavilion", meta: "West Campus • Waitlist only", img: ivy },
+  { name: "Umar Sulaim Hostel", meta: "North Campus • Male", img: heroEmerald },
+  { name: "Amina Hostel", meta: "South Campus • Female", img: verdant },
+  { name: "Ribadu Hostel", meta: "Central Campus • Male", img: cedar },
+  { name: "Sakawa Hostel", meta: "East Campus • Male", img: ivy },
+  { name: "Danfodio Hostel", meta: "West Campus • Male", img: heroEmerald },
+  { name: "Dangote Hostel", meta: "North Campus • Mixed", img: verdant },
 ];
 
 export default function Landing() {
@@ -136,7 +138,7 @@ export default function Landing() {
             </div>
             <Link to="/auth" className="text-sm font-medium text-leaf-600 flex items-center gap-1 hover:underline">View all blocks →</Link>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {blocks.map((b) => (
               <div key={b.name} className="group cursor-pointer">
                 <div className="w-full aspect-[4/5] bg-surface rounded-xl outline-1 -outline-offset-1 outline-black/5 overflow-hidden mb-4">
@@ -209,14 +211,14 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
             <div className="size-2 rounded-full bg-leaf-600"></div>
-            <span className="text-sm font-semibold">CampusStay Housing Systems</span>
+            <span className="text-sm font-semibold">ABU Hostel — Hostel Management System</span>
           </div>
           <div className="flex gap-6">
             <a href="#" className="text-xs text-muted-foreground hover:text-foreground">Privacy</a>
             <a href="#" className="text-xs text-muted-foreground hover:text-foreground">University Guidelines</a>
             <a href="#" className="text-xs text-muted-foreground hover:text-foreground">Contact Support</a>
           </div>
-          <p className="text-xs text-muted-foreground">© 2026 University Residential Services.</p>
+          <p className="text-xs text-muted-foreground">© 2026 ABU Hostel. All rights reserved.</p>
         </div>
       </footer>
     </div>

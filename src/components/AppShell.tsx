@@ -28,8 +28,7 @@ export function AppShell({ children, title }: { children: ReactNode; title: stri
           {items.map(({ to, label, Icon }) => (
             <NavLink key={to} to={to} end
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? "bg-leaf-50 text-leaf-700" : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? "bg-leaf-50 text-leaf-700" : "text-muted-foreground hover:bg-surface hover:text-foreground"
                 }`
               }>
               <Icon className="size-4" /> {label}
@@ -50,7 +49,7 @@ export function AppShell({ children, title }: { children: ReactNode; title: stri
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b border-border bg-white/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 sticky top-0 z-30">
           <div>
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">CampusStay</p>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">ABU Hostel</p>
             <h1 className="text-lg font-semibold">{title}</h1>
           </div>
           <div className="flex items-center gap-2">

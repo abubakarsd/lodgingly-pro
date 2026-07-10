@@ -25,7 +25,7 @@ const schemaOptions = {
 // 1. User Model (Covers auth.users, profiles, and user_roles)
 const UserSchema = new Schema({
   _id: { type: String, default: () => randomUUID() },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, unique: true, sparse: true },
   password: { type: String, required: true },
   full_name: { type: String },
   matric_number: { type: String, unique: true, sparse: true },

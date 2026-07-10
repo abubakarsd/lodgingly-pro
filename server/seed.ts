@@ -26,7 +26,7 @@ export async function seedDatabase() {
       { name: 'Verdant Wing', description: 'Quiet residence close to the library.', campus: 'South Campus', gender: 'female' },
       { name: 'Cedar Commons', description: 'Community-focused living with shared kitchens.', campus: 'Central Campus', gender: 'male' },
       { name: 'Ivy Pavilion', description: 'Premium en-suite rooms with courtyard views.', campus: 'West Campus', gender: 'mixed' }
-    ];
+    ] as const;
 
     for (const hData of hostelsData) {
       const hostel = await Hostel.create(hData);

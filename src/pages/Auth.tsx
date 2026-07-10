@@ -30,18 +30,11 @@ export default function Auth() {
     if (!loading && user) nav(role === "admin" ? "/admin" : "/dashboard", { replace: true });
   }, [user, role, loading, nav]);
 
-  const getStudentEmail = (reg: string) => {
-    // Supabase strict email validation will reject spaces and slashes (e.g. U19/CS/1000)
-    // So we strip all non-alphanumeric characters for the hidden email format
-    const safeReg = reg.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    return `${safeReg}@student.abu.edu.ng`;
-  };
-
   async function studentSignIn(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({
-      email: getStudentEmail(regNumber),
+      email: regNumber.trim(),
       password: studentPassword
     });
     setBusy(false);
@@ -51,10 +44,8 @@ export default function Auth() {
   async function studentSignUp(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const generatedEmail = getStudentEmail(regNumber);
-    console.log("Attempting signup with generated email:", generatedEmail);
     const { error, data } = await supabase.auth.signUp({
-      email: generatedEmail,
+      email: regNumber.trim(),
       password: studentPassword,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
@@ -62,8 +53,8 @@ export default function Auth() {
       },
     });
 
-    if (!error && data.user) {
-      // Best effort to update matric_number in the profile created by the trigger
+    if (!error && data?.user) {
+      // Best effort to update matric_number in the profile
       await supabase.from("profiles").update({ matric_number: regNumber.trim().toUpperCase() }).eq("id", data.user.id);
     }
 

@@ -4,6 +4,8 @@ const authListeners = new Set<(event: string, session: any) => void>();
 
 class QueryBuilder {
   table: string;
+  method: string = 'GET';
+  body: any = null;
   filters: Array<{ field: string; op: string; value: any }> = [];
   sortField: string | null = null;
   sortAscending = true;
@@ -14,7 +16,7 @@ class QueryBuilder {
   }
 
   select(fields: string = '*') {
-    // We just return this since fields filtering is done client-side or handled by the schema mapping
+    this.method = 'GET';
     return this;
   }
 
@@ -39,7 +41,7 @@ class QueryBuilder {
     return this;
   }
 
-  async execute(method: string, body?: any) {
+  async execute() {
     const sessionStr = localStorage.getItem('auth_session');
     const session = sessionStr ? JSON.parse(sessionStr) : null;
     const token = session?.access_token || '';
@@ -66,9 +68,9 @@ class QueryBuilder {
 
     try {
       const res = await fetch(url, {
-        method,
+        method: this.method,
         headers,
-        body: body ? JSON.stringify(body) : undefined
+        body: this.body ? JSON.stringify(this.body) : undefined
       });
       const data = await res.json();
       if (!res.ok) {
@@ -84,25 +86,30 @@ class QueryBuilder {
 
   // Thenable implementation to support direct await on the query builder
   then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any): Promise<any> {
-    return this.execute('GET').then(onfulfilled, onrejected);
+    return this.execute().then(onfulfilled, onrejected);
   }
 
   async maybeSingle() {
-    const { data, error } = await this.execute('GET');
+    const { data, error } = await this.execute();
     if (error) return { data: null, error };
     return { data: (data && data.length > 0) ? data[0] : null, error: null };
   }
 
-  async insert(body: any) {
-    return this.execute('POST', body);
+  insert(body: any) {
+    this.method = 'POST';
+    this.body = body;
+    return this;
   }
 
-  async update(body: any) {
-    return this.execute('PATCH', body);
+  update(body: any) {
+    this.method = 'PATCH';
+    this.body = body;
+    return this;
   }
 
-  async delete() {
-    return this.execute('DELETE');
+  delete() {
+    this.method = 'DELETE';
+    return this;
   }
 }
 
@@ -130,10 +137,17 @@ export const supabase = {
 
     async signUp({ email, password, options }: any) {
       try {
+        const payload: any = { password, fullName: options?.data?.full_name };
+        if (email.includes('@')) {
+          payload.email = email;
+        } else {
+          payload.matricNumber = email;
+        }
+
         const res = await fetch(`${API_URL}/auth/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, fullName: options?.data?.full_name })
+          body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (!res.ok) {

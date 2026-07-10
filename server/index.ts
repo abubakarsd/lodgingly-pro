@@ -73,26 +73,36 @@ const getModel = (tableName: string) => {
 // 1. Auth: Signup
 app.post('/api/auth/signup', async (req: Response | any, res: Response) => {
   try {
-    const { email, password, fullName } = req.body;
+    const { email, password, fullName, matricNumber } = req.body;
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+    if (matricNumber) {
+      const existingUser = await User.findOne({ matric_number: matricNumber.trim().toUpperCase() });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Registration number is already registered' });
+      }
+    }
+
+    if (email) {
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email is already registered' });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
     // Automatically make admin@abu.edu.ng an admin
-    const role = email.toLowerCase() === 'admin@abu.edu.ng' ? 'admin' : 'student';
+    const role = (email && email.toLowerCase() === 'admin@abu.edu.ng') ? 'admin' : 'student';
 
     const user = await User.create({
-      email: email.toLowerCase(),
+      email: email ? email.toLowerCase() : undefined,
+      matric_number: matricNumber ? matricNumber.trim().toUpperCase() : undefined,
       password: hashedPassword,
-      full_name: fullName || email.split('@')[0],
+      full_name: fullName || (email ? email.split('@')[0] : matricNumber),
       role
     });
 
-    const token = jwt.sign({ id: user.id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, role: user.role, email: user.email, matric_number: user.matric_number }, JWT_SECRET, { expiresIn: '7d' });
 
     const sessionPayload = {
       access_token: token,
@@ -100,9 +110,10 @@ app.post('/api/auth/signup', async (req: Response | any, res: Response) => {
       expires_in: 604800,
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email || null,
         user_metadata: {
           full_name: user.full_name,
+          matric_number: user.matric_number || null
         }
       }
     };
@@ -121,18 +132,26 @@ app.post('/api/auth/signup', async (req: Response | any, res: Response) => {
 app.post('/api/auth/login', async (req: Response | any, res: Response) => {
   try {
     const { email, password } = req.body;
+    const searchVal = (email || '').trim();
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    // Look up by email or matric_number (case insensitive)
+    const user = await User.findOne({
+      $or: [
+        { email: searchVal.toLowerCase() },
+        { matric_number: searchVal.toUpperCase() }
+      ]
+    });
+
     if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(400).json({ message: 'Invalid registration number/email or password' });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(400).json({ message: 'Invalid registration number/email or password' });
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, role: user.role, email: user.email, matric_number: user.matric_number }, JWT_SECRET, { expiresIn: '7d' });
 
     const sessionPayload = {
       access_token: token,
@@ -140,10 +159,10 @@ app.post('/api/auth/login', async (req: Response | any, res: Response) => {
       expires_in: 604800,
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email || null,
         user_metadata: {
           full_name: user.full_name,
-          matric_number: user.matric_number
+          matric_number: user.matric_number || null
         }
       }
     };

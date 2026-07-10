@@ -29,7 +29,7 @@ const connectDB = async () => {
   }
   if (isConnected && mongoose.connection.readyState === 1) return;
   await mongoose.connect(MONGODB_URL, {
-    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of hanging
+    serverSelectionTimeoutMS: 15000, // Timeout after 15s instead of hanging
   });
   isConnected = true;
   console.log("Connected to MongoDB Atlas!");

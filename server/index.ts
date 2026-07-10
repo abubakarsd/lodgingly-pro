@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { resolve } from 'path';
-import { User, Hostel, Block, Room, Allocation, Complaint, Message, Notification, ClearanceItem } from './models';
+import { User, Hostel, Block, Room, Allocation, Complaint, Message, Notification, ClearanceItem } from './models.js';
 // import { seedDatabase } from './seed';
 
 dotenv.config({ path: '.env' });

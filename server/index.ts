@@ -390,13 +390,22 @@ app.post('/api/db/:table', authenticateToken, async (req: AuthRequest | any, res
       return res.status(404).json({ message: `Table ${table} not supported` });
     }
 
-    // Set student_id if missing and user is logged in
-    if (!data.student_id && req.user?.id) {
+    // Set student_id if missing and user is logged in (unless they are an admin)
+    if (!data.student_id && req.user?.id && req.user.role !== 'admin') {
       data.student_id = req.user.id;
     }
 
     // Special validation logic for active allocations
     if (table === 'allocations') {
+      if (req.user?.role === 'admin') {
+        if (!data.student_id) {
+          return res.status(400).json({ message: 'Admin must specify a student_id to allocate a room.' });
+        }
+        if (data.student_id === req.user.id) {
+          return res.status(403).json({ message: 'Administrators are not permitted to allocate rooms to themselves.' });
+        }
+      }
+
       const activeCount = await Allocation.countDocuments({ student_id: data.student_id, status: 'active' });
       if (activeCount > 0) {
         return res.status(400).json({ message: 'Cancel your current allocation first.' });

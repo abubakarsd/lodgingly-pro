@@ -66,6 +66,27 @@ export default function Accommodation() {
   const [hDescription, setHDescription] = useState("");
   const [hImageUrl, setHImageUrl] = useState("");
 
+  // Add Hostel State
+  const [hostelAddDialogOpen, setHostelAddDialogOpen] = useState(false);
+  const [newHName, setNewHName] = useState("");
+  const [newHCampus, setNewHCampus] = useState("");
+  const [newHGender, setNewHGender] = useState("mixed");
+  const [newHDescription, setNewHDescription] = useState("");
+  const [newHImageUrl, setNewHImageUrl] = useState("");
+
+  // Add Block State
+  const [blockAddDialogOpen, setBlockAddDialogOpen] = useState(false);
+  const [newBName, setNewBName] = useState("");
+  const [newBFloors, setNewBFloors] = useState<number>(1);
+
+  // Add Room State
+  const [roomAddDialogOpen, setRoomAddDialogOpen] = useState(false);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [newRNumber, setNewRNumber] = useState("");
+  const [newRType, setNewRType] = useState("Shared");
+  const [newRCapacity, setNewRCapacity] = useState<number>(2);
+  const [newRPrice, setNewRPrice] = useState<number>(0);
+
   // Edit Room State
   const [roomDialogOpen, setRoomDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
@@ -74,6 +95,12 @@ export default function Accommodation() {
   const [rCapacity, setRCapacity] = useState<number>(2);
   const [rPrice, setRPrice] = useState<number>(0);
 
+  // Allocate Room to Student State
+  const [allocateDialogOpen, setAllocateDialogOpen] = useState(false);
+  const [allocateRoom, setAllocateRoom] = useState<Room | null>(null);
+  const [studentSearchKey, setStudentSearchKey] = useState("");
+  const [searchingStudent, setSearchingStudent] = useState(false);
+  const [foundStudent, setFoundStudent] = useState<any>(null);
 
   useEffect(() => { void load(); }, [user]);
 
@@ -101,6 +128,16 @@ export default function Accommodation() {
 
   async function reserve(room: Room) {
     if (!user) return;
+    
+    // If Admin, open student allocation dialog instead of reserving for himself
+    if (role === "admin") {
+      setAllocateRoom(room);
+      setFoundStudent(null);
+      setStudentSearchKey("");
+      setAllocateDialogOpen(true);
+      return;
+    }
+
     if (existing) { toast({ title: "Already allocated", description: "Cancel your current allocation first." }); return; }
     if (room.taken >= room.capacity) { toast({ title: "Full", description: "This room has no free beds.", variant: "destructive" }); return; }
     setBusyRoom(room.id);
@@ -160,6 +197,131 @@ export default function Accommodation() {
     }
   }
 
+  async function handleCreateHostel() {
+    if (!newHName.trim()) { toast({ title: "Name required" }); return; }
+    const { error } = await supabase.from("hostels").insert({
+      name: newHName,
+      campus: newHCampus,
+      gender: newHGender,
+      description: newHDescription,
+      image_url: newHImageUrl || null
+    });
+    if (error) {
+      toast({ title: "Failed to create hostel", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Hostel created successfully!" });
+      setHostelAddDialogOpen(false);
+      setNewHName("");
+      setNewHCampus("");
+      setNewHGender("mixed");
+      setNewHDescription("");
+      setNewHImageUrl("");
+      void load();
+    }
+  }
+
+  async function handleCreateBlock() {
+    if (!selected) return;
+    if (!newBName.trim()) { toast({ title: "Name required" }); return; }
+    const { error } = await supabase.from("blocks").insert({
+      hostel_id: selected,
+      name: newBName,
+      floors: Number(newBFloors)
+    });
+    if (error) {
+      toast({ title: "Failed to create block", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Block created successfully!" });
+      setBlockAddDialogOpen(false);
+      setNewBName("");
+      setNewBFloors(1);
+      void load();
+    }
+  }
+
+  async function handleCreateRoom() {
+    if (!activeBlockId) return;
+    if (!newRNumber.trim()) { toast({ title: "Room number required" }); return; }
+    const { error } = await supabase.from("rooms").insert({
+      block_id: activeBlockId,
+      room_number: newRNumber,
+      room_type: newRType,
+      capacity: Number(newRCapacity),
+      price_per_term: Number(newRPrice)
+    });
+    if (error) {
+      toast({ title: "Failed to create room", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Room created successfully!" });
+      setRoomAddDialogOpen(false);
+      setNewRNumber("");
+      setNewRType("Shared");
+      setNewRCapacity(2);
+      setNewRPrice(0);
+      void load();
+    }
+  }
+
+  async function handleSearchStudent() {
+    if (!studentSearchKey.trim()) return;
+    setSearchingStudent(true);
+    setFoundStudent(null);
+    const { data: profiles, error } = await supabase.from("profiles").select("*");
+    setSearchingStudent(false);
+    
+    if (error) {
+      toast({ title: "Search failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    
+    const key = studentSearchKey.trim().toLowerCase();
+    const student = (profiles ?? []).find(
+      (p: any) => p.email?.toLowerCase() === key || p.matric_number?.toLowerCase() === key
+    );
+    
+    if (!student) {
+      toast({ title: "Not found", description: "No student user found matching that registration number or email.", variant: "destructive" });
+    } else if (student.role !== "student") {
+      toast({ title: "Invalid role", description: "The user found is an Administrator, not a student.", variant: "destructive" });
+    } else {
+      setFoundStudent(student);
+      // Check if student already has active allocation
+      const { data: activeAlloc } = await supabase
+        .from("allocations")
+        .select("id")
+        .eq("student_id", student.id)
+        .eq("status", "active")
+        .maybeSingle();
+      if (activeAlloc) {
+        toast({ title: "Already allocated", description: "This student already has an active room allocation." });
+      }
+    }
+  }
+
+  async function handleAllocateToStudent() {
+    if (!allocateRoom || !foundStudent) return;
+    setBusyRoom(allocateRoom.id);
+    const bed = String.fromCharCode(65 + allocateRoom.taken);
+    const { error } = await supabase.from("allocations").insert({
+      student_id: foundStudent.id,
+      room_id: allocateRoom.id,
+      bed_label: bed,
+      term: "2026/27",
+      status: "active"
+    });
+    setBusyRoom(null);
+    if (error) {
+      toast({ title: "Allocation failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Allocation successful!", description: `Room ${allocateRoom.room_number} Bed ${bed} allocated to ${foundStudent.full_name}.` });
+      setAllocateDialogOpen(false);
+      setFoundStudent(null);
+      setStudentSearchKey("");
+      setAllocateRoom(null);
+      void load();
+    }
+  }
+
   async function handleSaveRoom() {
     if (!selectedRoom) return;
     const { error } = await supabase
@@ -186,7 +348,14 @@ export default function Accommodation() {
     <AppShell title="Accommodation">
       <div className="grid grid-cols-12 gap-6 animate-fade-up">
         <aside className="col-span-12 lg:col-span-4 space-y-3 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto pr-1">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Residences</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Residences</p>
+            {role === "admin" && (
+              <Button size="sm" variant="outline" onClick={() => setHostelAddDialogOpen(true)} className="h-7 text-xs px-2.5">
+                + Add Hostel
+              </Button>
+            )}
+          </div>
           {hostels.map((h) => (
             <button key={h.id} onClick={() => setSelected(h.id)}
               className={`w-full text-left rounded-xl overflow-hidden border transition-all ${
@@ -219,9 +388,14 @@ export default function Accommodation() {
                   </p>
                 </div>
                 {role === "admin" && (
-                  <Button variant="outline" size="sm" onClick={() => setHostelDialogOpen(true)} className="flex items-center gap-1.5 shrink-0">
-                    <Pencil className="size-3.5" /> Edit Hostel
-                  </Button>
+                  <div className="flex gap-2 shrink-0">
+                    <Button variant="outline" size="sm" onClick={() => setBlockAddDialogOpen(true)} className="flex items-center gap-1">
+                      + Add Block
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setHostelDialogOpen(true)} className="flex items-center gap-1.5">
+                      <Pencil className="size-3.5" /> Edit Hostel
+                    </Button>
+                  </div>
                 )}
               </div>
             </Card>
@@ -231,7 +405,22 @@ export default function Accommodation() {
             {shown.map((b) => (
               <Card key={b.id} className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">{b.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{b.name}</h3>
+                    {role === "admin" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setActiveBlockId(b.id);
+                          setRoomAddDialogOpen(true);
+                        }}
+                        className="text-xs h-6 px-1.5 text-leaf-600 hover:text-leaf-700 hover:bg-leaf-50"
+                      >
+                        + Add Room
+                      </Button>
+                    )}
+                  </div>
                   <span className="text-xs text-muted-foreground">{b.rooms.length} rooms</span>
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -271,8 +460,8 @@ export default function Accommodation() {
                         </div>
                         <div className="mt-3 flex items-center justify-between">
                           <span className="text-sm font-medium">₦{r.price_per_term.toLocaleString()}<span className="text-xs text-muted-foreground">/term</span></span>
-                          <Button size="sm" disabled={isFull || !!existing || busyRoom === r.id} onClick={() => reserve(r)}>
-                            {busyRoom === r.id ? "…" : "Reserve"}
+                          <Button size="sm" disabled={isFull || (role !== "admin" && !!existing) || busyRoom === r.id} onClick={() => reserve(r)}>
+                            {busyRoom === r.id ? "…" : role === "admin" ? "Allocate" : "Reserve"}
                           </Button>
                         </div>
                       </div>
@@ -328,6 +517,167 @@ export default function Accommodation() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setHostelDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveHostel}>Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Hostel Dialog */}
+      <Dialog open={hostelAddDialogOpen} onOpenChange={setHostelAddDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Hostel</DialogTitle>
+            <DialogDescription>
+              Create a new hostel building in the system.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="newHName">Hostel Name</Label>
+              <Input id="newHName" placeholder="e.g. Umar Sulaim Hostel" value={newHName} onChange={(e) => setNewHName(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newHCampus">Campus Location</Label>
+              <Input id="newHCampus" placeholder="e.g. North Campus" value={newHCampus} onChange={(e) => setNewHCampus(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newHGender">Gender Category</Label>
+              <Select value={newHGender} onValueChange={setNewHGender}>
+                <SelectTrigger id="newHGender">
+                  <SelectValue placeholder="Select Gender Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="mixed">Mixed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newHImageUrl">Custom Image URL (Optional)</Label>
+              <Input id="newHImageUrl" placeholder="https://example.com/hostel.jpg" value={newHImageUrl} onChange={(e) => setNewHImageUrl(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newHDesc">Description</Label>
+              <Textarea id="newHDesc" placeholder="Brief details about facilities, lounges, etc." rows={3} value={newHDescription} onChange={(e) => setNewHDescription(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHostelAddDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateHostel}>Add Hostel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Block Dialog */}
+      <Dialog open={blockAddDialogOpen} onOpenChange={setBlockAddDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Block to {active?.name}</DialogTitle>
+            <DialogDescription>
+              Create a new hostel block/section.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="newBName">Block Name</Label>
+              <Input id="newBName" placeholder="e.g. Block A" value={newBName} onChange={(e) => setNewBName(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newBFloors">Number of Floors</Label>
+              <Input id="newBFloors" type="number" min={1} value={newBFloors} onChange={(e) => setNewBFloors(Number(e.target.value))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBlockAddDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateBlock}>Add Block</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Room Dialog */}
+      <Dialog open={roomAddDialogOpen} onOpenChange={setRoomAddDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Room</DialogTitle>
+            <DialogDescription>
+              Create a new room in the selected block.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="newRNumber">Room Number</Label>
+              <Input id="newRNumber" placeholder="e.g. 101" value={newRNumber} onChange={(e) => setNewRNumber(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newRType">Room Type</Label>
+              <Input id="newRType" placeholder="e.g. Shared Ensuite" value={newRType} onChange={(e) => setNewRType(e.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newRCapacity">Capacity (Beds)</Label>
+              <Input id="newRCapacity" type="number" min={1} value={newRCapacity} onChange={(e) => setNewRCapacity(Number(e.target.value))} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newRPrice">Price per Term (₦)</Label>
+              <Input id="newRPrice" type="number" min={0} value={newRPrice} onChange={(e) => setNewRPrice(Number(e.target.value))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setRoomAddDialogOpen(false);
+              setActiveBlockId(null);
+            }}>Cancel</Button>
+            <Button onClick={handleCreateRoom}>Add Room</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Allocate Room to Student Dialog */}
+      <Dialog open={allocateDialogOpen} onOpenChange={setAllocateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Allocate Room {allocateRoom?.room_number} to Student</DialogTitle>
+            <DialogDescription>
+              Search for a student using their registration/matric number or email.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="studentSearch">Student Reg Number or Email</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="studentSearch"
+                  placeholder="e.g. U16CSC206 or student@abu.edu.ng"
+                  value={studentSearchKey}
+                  onChange={(e) => setStudentSearchKey(e.target.value)}
+                />
+                <Button disabled={searchingStudent} onClick={handleSearchStudent} size="sm">
+                  {searchingStudent ? "..." : "Search"}
+                </Button>
+              </div>
+            </div>
+
+            {foundStudent && (
+              <div className="rounded-xl border p-4 bg-muted/30 space-y-2 mt-2">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Student Profile Found</p>
+                <div className="text-sm space-y-1">
+                  <p><span className="font-medium">Name:</span> {foundStudent.full_name}</p>
+                  <p><span className="font-medium">Email:</span> {foundStudent.email || "N/A"}</p>
+                  <p><span className="font-medium">Reg Number:</span> {foundStudent.matric_number || "N/A"}</p>
+                  {foundStudent.phone && <p><span className="font-medium">Phone:</span> {foundStudent.phone}</p>}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setAllocateDialogOpen(false);
+              setFoundStudent(null);
+              setStudentSearchKey("");
+              setAllocateRoom(null);
+            }}>Cancel</Button>
+            <Button disabled={!foundStudent || busyRoom === allocateRoom?.id} onClick={handleAllocateToStudent}>
+              {busyRoom === allocateRoom?.id ? "..." : "Allocate Room"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

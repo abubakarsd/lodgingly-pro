@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { resolve } from 'path';
 import { User, Hostel, Block, Room, Allocation, Complaint, Message, Notification, ClearanceItem } from './models';
-import { seedDatabase } from './seed';
+// import { seedDatabase } from './seed';
 
 dotenv.config({ path: '.env' });
 
@@ -16,8 +16,7 @@ const MONGODB_URL = process.env.MONGODB_URL;
 const JWT_SECRET = process.env.JWT_SECRET || 'lodgingly-pro-super-secret-key-12345';
 
 if (!MONGODB_URL) {
-  console.error("Error: MONGODB_URL environment variable is missing!");
-  process.exit(1);
+  console.warn("Warning: MONGODB_URL environment variable is missing!");
 }
 
 app.use(cors());
@@ -25,8 +24,13 @@ app.use(express.json());
 
 let isConnected = false;
 const connectDB = async () => {
+  if (!MONGODB_URL) {
+    throw new Error("MONGODB_URL environment variable is not configured. Please add it to your server configuration.");
+  }
   if (isConnected && mongoose.connection.readyState === 1) return;
-  await mongoose.connect(MONGODB_URL!);
+  await mongoose.connect(MONGODB_URL, {
+    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of hanging
+  });
   isConnected = true;
   console.log("Connected to MongoDB Atlas!");
 };
@@ -463,7 +467,7 @@ app.delete('/api/db/:table', authenticateToken, async (req: AuthRequest | any, r
 if (!process.env.VERCEL) {
   connectDB()
     .then(async () => {
-      await seedDatabase();
+      // await seedDatabase();
       app.listen(PORT, () => {
         console.log(`Backend Server is running on http://localhost:${PORT}`);
       });

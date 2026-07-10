@@ -46,7 +46,7 @@ const UserSchema = new Schema({
     }
   }
 });
-export const User = mongoose.model('User', UserSchema);
+export const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
 // 2. Hostel Model
 const HostelSchema = new Schema({
@@ -57,7 +57,7 @@ const HostelSchema = new Schema({
   gender: { type: String, enum: ['male', 'female', 'mixed'], default: 'mixed' },
   image_url: { type: String }
 }, { ...schemaOptions, timestamps: { createdAt: 'created_at', updatedAt: false } });
-export const Hostel = mongoose.model('Hostel', HostelSchema);
+export const Hostel = mongoose.models.Hostel || mongoose.model('Hostel', HostelSchema);
 
 // 3. Block Model
 const BlockSchema = new Schema({
@@ -66,7 +66,7 @@ const BlockSchema = new Schema({
   name: { type: String, required: true },
   floors: { type: Number, default: 1 }
 }, { ...schemaOptions, timestamps: { createdAt: 'created_at', updatedAt: false } });
-export const Block = mongoose.model('Block', BlockSchema);
+export const Block = mongoose.models.Block || mongoose.model('Block', BlockSchema);
 
 // 4. Room Model
 const RoomSchema = new Schema({
@@ -77,7 +77,7 @@ const RoomSchema = new Schema({
   room_type: { type: String, default: 'Shared' },
   price_per_term: { type: Number, default: 0 }
 }, { ...schemaOptions, timestamps: { createdAt: 'created_at', updatedAt: false } });
-export const Room = mongoose.model('Room', RoomSchema);
+export const Room = mongoose.models.Room || mongoose.model('Room', RoomSchema);
 
 // 5. Allocation Model
 const AllocationSchema = new Schema({
@@ -89,7 +89,7 @@ const AllocationSchema = new Schema({
   status: { type: String, enum: ['active', 'expired', 'cancelled'], default: 'active' },
   allocated_at: { type: Date, default: Date.now }
 }, { ...schemaOptions, timestamps: { createdAt: 'created_at', updatedAt: false } });
-export const Allocation = mongoose.model('Allocation', AllocationSchema);
+export const Allocation = mongoose.models.Allocation || mongoose.model('Allocation', AllocationSchema);
 
 // 6. Complaint Model
 const ComplaintSchema = new Schema({
@@ -102,7 +102,7 @@ const ComplaintSchema = new Schema({
   priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
   status: { type: String, enum: ['open', 'in_progress', 'resolved', 'closed'], default: 'open' }
 }, schemaOptions);
-export const Complaint = mongoose.model('Complaint', ComplaintSchema);
+export const Complaint = mongoose.models.Complaint || mongoose.model('Complaint', ComplaintSchema);
 
 // 7. Message Model
 const MessageSchema = new Schema({
@@ -111,7 +111,7 @@ const MessageSchema = new Schema({
   sender_id: { type: String, ref: 'User', required: true },
   body: { type: String, required: true }
 }, { ...schemaOptions, timestamps: { createdAt: 'created_at', updatedAt: false } });
-export const Message = mongoose.model('Message', MessageSchema);
+export const Message = mongoose.models.Message || mongoose.model('Message', MessageSchema);
 
 // 8. Notification Model
 const NotificationSchema = new Schema({
@@ -121,7 +121,7 @@ const NotificationSchema = new Schema({
   body: { type: String },
   read: { type: Boolean, default: false }
 }, { ...schemaOptions, timestamps: { createdAt: 'created_at', updatedAt: false } });
-export const Notification = mongoose.model('Notification', NotificationSchema);
+export const Notification = mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);
 
 // 9. ClearanceItem Model
 const ClearanceItemSchema = new Schema({
@@ -131,4 +131,4 @@ const ClearanceItemSchema = new Schema({
   status: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
   verified_by: { type: String, ref: 'User' }
 }, schemaOptions);
-export const ClearanceItem = mongoose.model('ClearanceItem', ClearanceItemSchema);
+export const ClearanceItem = mongoose.models.ClearanceItem || mongoose.model('ClearanceItem', ClearanceItemSchema);

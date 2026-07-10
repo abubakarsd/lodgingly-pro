@@ -1,6 +1,6 @@
 # ABU Hostel — Hostel Management System
 
-A comprehensive digital platform for **Ahmadu Bello University, Zaria** hostel management. Students can browse hostels, reserve beds, submit complaints, and track clearance — all from a single modern web portal. Administrators get real-time occupancy tracking, complaint management, and billing tools.
+A comprehensive digital platform for **Ahmadu Bello University, Zaria** hostel management. Students can browse hostels, reserve beds, submit complaints, track clearance, and communicate via a message board — all from a single modern web portal. Administrators get real-time occupancy tracking, complaint management, user accounts control, and billing tools.
 
 ---
 
@@ -8,12 +8,13 @@ A comprehensive digital platform for **Ahmadu Bello University, Zaria** hostel m
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + TypeScript + Vite |
-| Styling | Tailwind CSS + shadcn/ui |
-| Backend / Database | Supabase (PostgreSQL) |
-| Auth | Supabase Auth (Email/Password + Google OAuth) |
-| State | TanStack React Query |
-| Routing | React Router v6 |
+| **Frontend** | React 18 + TypeScript + Vite |
+| **Styling** | Tailwind CSS + shadcn/ui |
+| **Backend API** | Node.js + Express + TypeScript (`tsx`) |
+| **Database** | MongoDB Atlas / Local MongoDB (Mongoose ODM) |
+| **Auth** | Custom JWT (JSON Web Token) Authentication |
+| **State** | TanStack React Query |
+| **Routing** | React Router v6 |
 
 ---
 
@@ -23,7 +24,7 @@ Make sure you have the following installed:
 
 - [Node.js](https://nodejs.org/) v18 or higher
 - [npm](https://www.npmjs.com/) or [bun](https://bun.sh/)
-- A [Supabase](https://supabase.com) account **OR** Docker Desktop (for local offline mode)
+- A **MongoDB** database (either a local instance or a cloud MongoDB Atlas cluster)
 
 ---
 
@@ -46,237 +47,79 @@ bun install
 
 ### 3. Configure environment variables
 
-Create a `.env` file in the project root (or update the existing one):
+Create a `.env` file in the project root:
 
 ```env
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-public-key
+MONGODB_URL="mongodb+srv://<username>:<password>@cluster0.cc13bhd.mongodb.net/ABU-Hostel-System?appName=Cluster0"
+JWT_SECRET="your-secure-jwt-secret-key"
 ```
 
-> See [Cloud Setup](#-option-a-supabase-cloud-online) or [Local Setup](#-option-b-local-supabase-offline--docker) below for how to get these values.
+> **Note**: Do not commit the `.env` file to version control. It is already added to `.gitignore`.
 
-### 4. Start the development server
+### 4. Seed the database
+
+Populate the database with initial hostels, block layouts, rooms, and default users (admin and student accounts):
+
+```bash
+npm run seed
+```
+
+### 5. Start the development server
+
+Start both the Express backend server (port 3000) and the Vite frontend dev server (port 8080) concurrently:
 
 ```bash
 npm run dev
 ```
 
-The app will be available at **http://localhost:8080**
-
-### Other scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start dev server with hot reload |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build locally |
-| `npm run lint` | Run ESLint |
-| `npm run test` | Run unit tests (Vitest) |
+The app will be available at **http://localhost:8080**.
 
 ---
 
-## 🗄️ Database
+## 🗄️ Database Schema & Models
 
-### Database Name / Provider
+The database models are defined using **Mongoose** in `server/models.ts`.
 
-**Supabase** — powered by **PostgreSQL** under the hood.
-
-The database name in local mode is: **`postgres`**  
-Connection string (local): `postgresql://postgres:postgres@127.0.0.1:54322/postgres`
-
-### Schema Overview
+### Relationships Overview
 
 ```
-auth.users                  ← managed by Supabase Auth
-│
-├── profiles                ← student profile info (name, matric, phone, program)
-├── user_roles              ← role per user: 'student' | 'admin'
-│
-├── hostels                 ← hostel buildings (Umar Sulaim, Amina, etc.)
-│   └── blocks              ← blocks within each hostel (Block A, B, ...)
-│       └── rooms           ← rooms within each block (capacity, type, price)
-│           └── allocations ← student bed assignments (bed_label, term, status)
-│           └── messages    ← roommate chat per room (realtime)
-│
-├── complaints              ← maintenance / service tickets
-├── clearance_items         ← move-in/move-out clearance steps
-└── notifications           ← in-app notifications (realtime)
+User (profiles)             ← students & administrators
+ │
+ ├── Hostels                 ← hostel buildings (Umar Sulaim, Amina, etc.)
+ │    └── Blocks             ← blocks within each hostel (Block A, B, ...)
+ │         └── Rooms         ← rooms within each block (capacity, type, price)
+ │              └── Allocations ← student bed assignments (bed_label, term, status)
+ │              └── Messages    ← general board chats (realtime)
+ │
+ ├── Complaints              ← maintenance / service tickets
+ ├── ClearanceItems          ← student clearance statuses
+ └── Notifications           ← in-app user inbox alerts
 ```
 
 ### Tables at a Glance
 
-| Table | Key Columns |
+| Model | Schema Fields |
 |-------|-------------|
-| `profiles` | `id`, `full_name`, `matric_number`, `phone`, `program` |
-| `user_roles` | `user_id`, `role` (`student` \| `admin`) |
-| `hostels` | `name`, `description`, `campus`, `gender` |
-| `blocks` | `hostel_id`, `name`, `floors` |
-| `rooms` | `block_id`, `room_number`, `capacity`, `room_type`, `price_per_term` |
-| `allocations` | `student_id`, `room_id`, `bed_label`, `term`, `status` |
-| `complaints` | `student_id`, `title`, `category`, `priority`, `status` |
-| `clearance_items` | `student_id`, `item`, `status`, `verified_by` |
-| `messages` | `room_id`, `sender_id`, `body` |
-| `notifications` | `user_id`, `title`, `body`, `read` |
-
-### Enums
-
-| Enum | Values |
-|------|--------|
-| `app_role` | `student`, `admin` |
-| `allocation_status` | `active`, `expired`, `cancelled` |
-| `complaint_status` | `open`, `in_progress`, `resolved`, `closed` |
-| `complaint_priority` | `low`, `medium`, `high` |
-| `clearance_status` | `pending`, `verified`, `rejected` |
-| `hostel_gender` | `male`, `female`, `mixed` |
+| **User** | `_id`, `email`, `password` (hashed), `full_name`, `matric_number`, `role` (`student` \| `admin`), `phone`, `program`, `avatar_url` |
+| **Hostel** | `_id`, `name`, `description`, `campus`, `gender`, `image_url` |
+| **Block** | `_id`, `hostel_id` (ref Hostel), `name`, `floors` |
+| **Room** | `_id`, `block_id` (ref Block), `room_number`, `capacity`, `room_type`, `price_per_term` |
+| **Allocation** | `_id`, `student_id` (ref User), `room_id` (ref Room), `bed_label`, `term`, `status` (`active` \| `expired` \| `cancelled`) |
+| **Complaint** | `_id`, `student_id` (ref User), `category`, `title`, `description`, `priority` (`low` \| `medium` \| `high`), `status` (`open` \| `in_progress` \| `resolved` \| `closed`) |
+| **Message** | `_id`, `room_id` (default 'general-board'), `sender_id` (ref User), `body` |
+| **Notification** | `_id`, `user_id` (ref User), `title`, `body`, `read` (boolean) |
+| **ClearanceItem** | `_id`, `student_id` (ref User), `item`, `status` (`pending` \| `verified` \| `rejected`), `verified_by` (ref User) |
 
 ---
 
-## ☁️ Option A: Supabase Cloud (Online) - Recommended
+## 👤 User Roles & Default Logins
 
-### 1. Create a Supabase project
+The database includes two default seeded users for ease of testing:
 
-1. Go to [https://supabase.com](https://supabase.com) and sign in.
-2. Click **New Project** and fill in the details (save your Database Password securely).
-3. Wait for the project to provision (~2 minutes).
-
-### 2. Get your credentials
-
-In your Supabase dashboard → **Project Settings → API**:
-- Copy **Project URL** → `VITE_SUPABASE_URL` in your `.env`
-- Copy **anon / public key** → `VITE_SUPABASE_PUBLISHABLE_KEY` in your `.env`
-- The `VITE_SUPABASE_PROJECT_ID` is just the subdomain part of your URL (e.g., `swtoxbvvbxhvfucxdcwc`).
-
-### 3. Log in to the Supabase CLI
-
-You must log in to the CLI to prove you have access to your Supabase account:
-
-```bash
-supabase login
-```
-*This will open a browser window and generate a token for your terminal.*
-
-### 4. Link and Migrate the Database
-
-Link your local project to your newly created Supabase cloud project:
-
-```bash
-supabase link --project-ref <your-project-id>
-```
-*(When prompted, paste the Database Password you created in Step 1).*
-
-Finally, push all the database tables, roles, and initial seed data to the cloud. If you are starting fresh, it is safest to run a reset to ensure all migrations apply cleanly:
-
-```bash
-supabase db reset --linked
-```
-*(Press `y` when it asks if you want to reset the remote database).*
-
----
-
-## 🐳 Option B: Local Supabase (Offline — with Docker)
-
-This runs the full Supabase stack on your machine. **No internet required** after initial setup.
-
-### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and **running**
-- Supabase CLI: `brew install supabase/tap/supabase`
-
-### 1. Start local Supabase
-
-```bash
-cd lodgingly-pro
-supabase start
-```
-
-This downloads and starts PostgreSQL, Auth, Storage, and the REST API locally via Docker. First run may take a few minutes.
-
-### 2. Note the local credentials
-
-After starting, you will see output like:
-
-```
-         API URL: http://127.0.0.1:54321
-          DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      Studio URL: http://127.0.0.1:54323
-    Inbucket URL: http://127.0.0.1:54324   ← captures auth emails locally
-        anon key: eyJ...
-service_role key: eyJ...
-```
-
-### 3. Update your `.env` with local credentials
-
-```env
-VITE_SUPABASE_URL=http://127.0.0.1:54321
-VITE_SUPABASE_PUBLISHABLE_KEY=<anon key from above>
-```
-
-### 4. Apply migrations
-
-```bash
-supabase db reset
-```
-
-This runs all SQL files in `supabase/migrations/` against your local database, including seed data.
-
-### 5. Open local Studio (database GUI)
-
-Visit **http://127.0.0.1:54323** — this is the full Supabase dashboard running offline.
-
-### Stopping / restarting
-
-```bash
-supabase stop              # stop all containers (data is preserved)
-supabase stop --no-backup  # stop and wipe all local data
-supabase start             # start again
-```
-
----
-
-## 🖥️ Option C: Local PostgreSQL Only (without Docker)
-
-If you do not want Docker, you can connect directly to a **local PostgreSQL** installation. Note that Supabase Auth middleware won't be available — this is best suited for inspecting/editing data only.
-
-### Prerequisites
-
-- [PostgreSQL 15+](https://www.postgresql.org/download/) installed locally
-- `psql` available in your terminal
-
-### 1. Create the database
-
-```bash
-psql -U postgres -c "CREATE DATABASE abu_hostel;"
-```
-
-### 2. Apply the schema manually
-
-```bash
-psql -U postgres -d abu_hostel -f supabase/migrations/20260705081135_initial_schema.sql
-psql -U postgres -d abu_hostel -f supabase/migrations/20260705081143_revoke_public_exec.sql
-psql -U postgres -d abu_hostel -f supabase/migrations/20260709091456_admin_profile_policy.sql
-```
-
-### 3. Note
-
-A raw PostgreSQL connection alone does not provide the JWT-based auth that the app requires. For a fully working offline experience use **Option B (Docker)**.
-
----
-
-## 👤 User Roles
-
-| Role | Default | Access |
-|------|---------|--------|
-| `student` | ✅ All new sign-ups | Dashboard, Accommodation, Complaints |
-| `admin` | ❌ Must be manually assigned | All student pages + Admin Overview |
-
-### Promoting a user to admin
-
-Run this in the Supabase SQL Editor (cloud dashboard or local Studio at port 54323):
-
-```sql
-INSERT INTO public.user_roles (user_id, role)
-VALUES ('<paste-user-uuid-here>', 'admin');
-```
+| Role | Email | Password | Matric Number |
+|------|-------|----------|---------------|
+| **Administrator** | `admin@abu.edu.ng` | `adminpassword` | N/A |
+| **Student** | `student@abu.edu.ng` | `studentpassword` | `U16CSC206` |
 
 ---
 
@@ -284,40 +127,35 @@ VALUES ('<paste-user-uuid-here>', 'admin');
 
 ```
 lodgingly-pro/
+├── server/
+│   ├── index.ts         # Express server & MongoDB CRUD/Auth routing
+│   ├── models.ts        # Mongoose schema definitions and models
+│   └── seed.ts          # Database seed script for initial testing data
 ├── src/
 │   ├── assets/          # Images (hostel photos, ABU logo, bg image)
 │   ├── components/      # Reusable UI components
-│   │   ├── AppShell.tsx # Sidebar + header layout for authenticated pages
-│   │   ├── Logo.tsx     # ABU Hostel logo component
-│   │   └── ui/          # shadcn/ui primitives (Button, Card, Dialog, etc.)
-│   ├── hooks/           # useAuth, use-toast, use-mobile
+│   │   ├── AppShell.tsx # Sticky sidebar + header layout
+│   │   ├── Logo.tsx     # ABU Hostel logo
+│   │   └── ui/          # shadcn/ui primitives (Button, Table, Dialog, etc.)
+│   ├── hooks/           # useAuth hook, toast utilities
 │   ├── integrations/
-│   │   └── supabase/    # Supabase client + generated TypeScript types
+│   │   └── supabase/    # Supabase layout wrapper mapping requests to the Express server
 │   ├── pages/
-│   │   ├── Landing.tsx           # Public marketing homepage
-│   │   ├── Auth.tsx              # Login / Sign-up page
-│   │   ├── StudentDashboard.tsx  # Student home (allocation + complaints)
-│   │   ├── Accommodation.tsx     # Browse & reserve hostel rooms
-│   │   └── AdminDashboard.tsx    # Admin occupancy + complaint overview
-│   └── App.tsx          # Route definitions + auth providers
-├── supabase/
-│   ├── config.toml      # Local Supabase project config
-│   └── migrations/      # All SQL schema, RLS policies, and seed data
-├── public/              # Static assets (favicon, logos)
-├── .env                 # Environment variables (never commit to git)
+│   │   ├── Landing.tsx       # Marketing landing page
+│   │   ├── Auth.tsx          # Login / Sign-up page
+│   │   ├── StudentDashboard.tsx # Student overview
+│   │   ├── Accommodation.tsx # Hostel browser & bed reservations
+│   │   ├── Clearance.tsx     # Student clearance checks & Admin verification
+│   │   ├── Users.tsx         # Admin accounts control page (CRUD)
+│   │   ├── Allocations.tsx   # Admin bed space allocations manager
+│   │   ├── Complaints.tsx    # Maintenance tickets filer & board
+│   │   ├── Messages.tsx      # General discussion board
+│   │   └── Notifications.tsx # User alerts inbox
+│   └── App.tsx          # Router config with Protected Route guards
+├── vercel.json          # Deployment routing rewrites configuration
+├── .env                 # Environment variables file (ignored by Git)
 └── package.json
 ```
-
----
-
-## 🔐 Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_SUPABASE_URL` | Supabase project URL or local `http://127.0.0.1:54321` |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase `anon` public key |
-
-> ⚠️ **Never** commit your `.env` file or `service_role` key to version control. The `.env` file is already listed in `.gitignore`.
 
 ---
 

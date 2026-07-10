@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { ReactNode } from "react";
-import { Bell, Building2, LayoutDashboard, LogOut, Settings, Wrench } from "lucide-react";
+import { Bell, Building2, LayoutDashboard, LogOut, Settings, Wrench, User, FileText, MessageCircle, MessageSquare } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,12 @@ const studentNav = [
 
 const adminNav = [
   { to: "/admin", label: "Overview", Icon: LayoutDashboard },
-  { to: "/accommodation", label: "Inventory", Icon: Building2 },
+  { to: "/accommodation", label: "Hostels", Icon: Building2 },
+  { to: "/clearance", label: "Clearance", Icon: FileText },
+  { to: "/users", label: "Users", Icon: User },
+  { to: "/allocations", label: "Allocations", Icon: Building2 },
+  { to: "/complaints", label: "Complaints", Icon: MessageCircle },
+  { to: "/messages", label: "Messages", Icon: MessageSquare },
 ];
 
 export function AppShell({ children, title }: { children: ReactNode; title: string }) {
@@ -22,9 +27,9 @@ export function AppShell({ children, title }: { children: ReactNode; title: stri
 
   return (
     <div className="min-h-screen bg-surface flex">
-      <aside className="hidden md:flex w-60 flex-col border-r border-border bg-white">
+      <aside className="hidden md:flex w-60 flex-col border-r border-border bg-white sticky top-0 h-screen">
         <div className="h-16 flex items-center px-6 border-b border-border"><Logo /></div>
-        <nav className="p-3 space-y-1 flex-1">
+        <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
           {items.map(({ to, label, Icon }) => (
             <NavLink key={to} to={to} end
               className={({ isActive }) =>

@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 const studentNav = [
   { to: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
   { to: "/accommodation", label: "Accommodation", Icon: Building2 },
+  { to: "/clearance", label: "Clearance", Icon: FileText },
+  { to: "/complaints", label: "Complaints", Icon: MessageCircle },
+  { to: "/messages", label: "Messages", Icon: MessageSquare },
 ];
 
 const adminNav = [
@@ -58,7 +61,9 @@ export function AppShell({ children, title }: { children: ReactNode; title: stri
             <h1 className="text-lg font-semibold">{title}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon"><Bell className="size-4" /></Button>
+            <NavLink to="/notifications" className={({ isActive }) => isActive ? "text-leaf-700" : "text-muted-foreground hover:text-foreground"}>
+              <Button variant="ghost" size="icon"><Bell className="size-4" /></Button>
+            </NavLink>
             <Button variant="ghost" size="icon" className="md:hidden" onClick={async () => { await signOut(); nav("/"); }}>
               <LogOut className="size-4" />
             </Button>

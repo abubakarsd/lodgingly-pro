@@ -277,7 +277,22 @@ app.get('/api/db/:table', authenticateToken, async (req: AuthRequest | any, res:
             model: 'Hostel'
           }
         }
+      }).populate({
+        path: 'student_id',
+        model: 'User'
       });
+    }
+
+    if (table === 'clearance_items') {
+      query = query.populate({ path: 'student_id', model: 'User' }).populate({ path: 'verified_by', model: 'User' });
+    }
+
+    if (table === 'complaints') {
+      query = query.populate({ path: 'student_id', model: 'User' });
+    }
+
+    if (table === 'messages') {
+      query = query.populate({ path: 'sender_id', model: 'User' });
     }
 
     const docs = await query.exec();

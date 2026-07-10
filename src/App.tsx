@@ -9,6 +9,12 @@ import Auth from "./pages/Auth";
 import StudentDashboard from "./pages/StudentDashboard";
 import Accommodation from "./pages/Accommodation";
 import AdminDashboard from "./pages/AdminDashboard";
+import Clearance from "./pages/Clearance";
+import Users from "./pages/Users";
+import Allocations from "./pages/Allocations";
+import Complaints from "./pages/Complaints";
+import Messages from "./pages/Messages";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

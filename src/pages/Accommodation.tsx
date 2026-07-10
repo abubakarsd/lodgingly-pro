@@ -185,7 +185,7 @@ export default function Accommodation() {
   return (
     <AppShell title="Accommodation">
       <div className="grid grid-cols-12 gap-6 animate-fade-up">
-        <aside className="col-span-12 lg:col-span-4 space-y-3">
+        <aside className="col-span-12 lg:col-span-4 space-y-3 lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto pr-1">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Residences</p>
           {hostels.map((h) => (
             <button key={h.id} onClick={() => setSelected(h.id)}

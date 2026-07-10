@@ -102,6 +102,16 @@ export default function Accommodation() {
   const [searchingStudent, setSearchingStudent] = useState(false);
   const [foundStudent, setFoundStudent] = useState<any>(null);
 
+  // Paystack Checkout State
+  const [paystackDialogOpen, setPaystackDialogOpen] = useState(false);
+  const [paystackRoom, setPaystackRoom] = useState<Room | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "transfer" | "bank">("card");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [paystackStage, setPaystackStage] = useState<"idle" | "loading" | "otp" | "success">("idle");
+  const [otpCode, setOtpCode] = useState("");
+
   useEffect(() => { void load(); }, [user]);
 
   async function load() {
@@ -140,14 +150,30 @@ export default function Accommodation() {
 
     if (existing) { toast({ title: "Already allocated", description: "Cancel your current allocation first." }); return; }
     if (room.taken >= room.capacity) { toast({ title: "Full", description: "This room has no free beds.", variant: "destructive" }); return; }
+    
+    // Open Paystack dialog instead of inserting immediately
+    setPaystackRoom(room);
+    setPaymentMethod("card");
+    setCardNumber("");
+    setCardExpiry("");
+    setCardCvv("");
+    setPaystackStage("idle");
+    setOtpCode("");
+    setPaystackDialogOpen(true);
+  }
+
+  async function completeReservationAfterPayment(room: Room) {
     setBusyRoom(room.id);
     const bed = String.fromCharCode(65 + room.taken); // A, B, C
     const { error } = await supabase.from("allocations").insert({
-      student_id: user.id, room_id: room.id, bed_label: bed, term: "2026/27", status: "active",
+      student_id: user!.id, room_id: room.id, bed_label: bed, term: "2026/27", status: "active",
     });
     setBusyRoom(null);
-    if (error) { toast({ title: "Reservation failed", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Reserved!", description: `Bed ${bed} — Room ${room.room_number}` });
+    if (error) {
+      toast({ title: "Reservation failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Reserved & Paid!", description: `Bed ${bed} — Room ${room.room_number}` });
     void load();
   }
 
@@ -320,6 +346,48 @@ export default function Accommodation() {
       setAllocateRoom(null);
       void load();
     }
+  }
+
+  async function handlePaystackSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (paymentMethod === "card") {
+      if (!cardNumber || !cardExpiry || !cardCvv) {
+        toast({ title: "Form incomplete", description: "Please fill out card details.", variant: "destructive" });
+        return;
+      }
+      setPaystackStage("loading");
+      setTimeout(() => {
+        setPaystackStage("otp");
+      }, 1500);
+    }
+  }
+
+  async function handleOtpSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!otpCode) return;
+    setPaystackStage("loading");
+    setTimeout(() => {
+      setPaystackStage("success");
+      setTimeout(() => {
+        setPaystackDialogOpen(false);
+        if (paystackRoom) {
+          void completeReservationAfterPayment(paystackRoom);
+        }
+      }, 1500);
+    }, 1500);
+  }
+
+  async function handleTransferConfirm() {
+    setPaystackStage("loading");
+    setTimeout(() => {
+      setPaystackStage("success");
+      setTimeout(() => {
+        setPaystackDialogOpen(false);
+        if (paystackRoom) {
+          void completeReservationAfterPayment(paystackRoom);
+        }
+      }, 1500);
+    }, 2000);
   }
 
   async function handleSaveRoom() {
@@ -681,6 +749,191 @@ export default function Accommodation() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Paystack Payment Checkout Simulation Dialog */}
+      <Dialog open={paystackDialogOpen} onOpenChange={paystackStage !== "loading" ? setPaystackDialogOpen : undefined}>
+        <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-none bg-zinc-950 text-white rounded-2xl">
+          <div className="grid grid-cols-12 min-h-[380px]">
+            {/* Sidebar info */}
+            <div className="col-span-4 bg-zinc-900 p-6 flex flex-col justify-between border-r border-zinc-800">
+              <div className="space-y-4">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Checkout</span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] text-zinc-400 font-medium truncate">{user?.email}</p>
+                  <p className="text-xs text-zinc-500">Pay ABU Zaria</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] text-zinc-400 font-semibold tracking-wide uppercase">Amount</span>
+                <p className="text-xl font-bold text-[#3bb75e]">₦{paystackRoom ? paystackRoom.price_per_term.toLocaleString() : "0"}</p>
+              </div>
+            </div>
+
+            {/* Main Checkout Panel */}
+            <div className="col-span-8 p-6 flex flex-col justify-between bg-zinc-950 relative">
+              {paystackStage === "loading" && (
+                <div className="absolute inset-0 bg-zinc-950/95 flex flex-col items-center justify-center space-y-4 z-50">
+                  <div className="w-10 h-10 border-4 border-t-[#3bb75e] border-zinc-800 rounded-full animate-spin" />
+                  <p className="text-xs font-medium text-zinc-400">Processing secure transaction...</p>
+                </div>
+              )}
+
+              {paystackStage === "success" && (
+                <div className="absolute inset-0 bg-zinc-950 flex flex-col items-center justify-center space-y-3 z-50 animate-fade-in">
+                  <div className="size-12 rounded-full bg-[#3bb75e]/25 flex items-center justify-center ring-4 ring-[#3bb75e]/10 animate-bounce">
+                    <svg className="size-6 text-[#3bb75e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h4 className="font-bold text-[#3bb75e] text-base">Payment Successful</h4>
+                  <p className="text-[11px] text-zinc-500">Allocation confirmed instantly</p>
+                </div>
+              )}
+
+              {paystackStage === "otp" && (
+                <form onSubmit={handleOtpSubmit} className="flex-1 flex flex-col justify-between z-10">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold text-sm">Verify Card Transaction</h4>
+                      <p className="text-[11px] text-zinc-400 mt-1">A one-time passcode has been sent to your phone. Enter passcode below to authorize.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-zinc-400 text-xs">One-Time PIN (OTP)</Label>
+                      <Input
+                        required
+                        placeholder="e.g. 12345"
+                        maxLength={5}
+                        className="bg-zinc-900 border-zinc-800 text-white text-center text-lg tracking-widest focus-visible:ring-[#3bb75e]"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-4 pt-4">
+                    <Button type="submit" className="w-full bg-[#3bb75e] hover:bg-[#3bb75e]/95 text-white font-semibold text-sm">
+                      Authorize Payment
+                    </Button>
+                    <p className="text-[9px] text-center text-zinc-600">Secure transaction certified by Paystack SSL network.</p>
+                  </div>
+                </form>
+              )}
+
+              {paystackStage === "idle" && (
+                <div className="flex-1 flex flex-col justify-between">
+                  {/* Select Payment Method Tabs */}
+                  <div className="flex gap-1.5 p-1 bg-zinc-900 rounded-lg">
+                    <button
+                      onClick={() => setPaymentMethod("card")}
+                      className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-md transition-all ${
+                        paymentMethod === "card" ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      Card
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod("transfer")}
+                      className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-md transition-all ${
+                        paymentMethod === "transfer" ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      Bank Transfer
+                    </button>
+                  </div>
+
+                  {paymentMethod === "card" && (
+                    <form onSubmit={handlePaystackSubmit} className="flex-1 flex flex-col justify-between pt-4">
+                      <div className="space-y-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-zinc-400 text-[10px] uppercase font-semibold">Card Number</Label>
+                          <Input
+                            required
+                            placeholder="4000 1234 5678 9010"
+                            maxLength={19}
+                            className="bg-zinc-900 border-zinc-800 text-white focus-visible:ring-[#3bb75e] text-sm"
+                            value={cardNumber}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim();
+                              setCardNumber(val);
+                            }}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-zinc-400 text-[10px] uppercase font-semibold">Expiry Date</Label>
+                            <Input
+                              required
+                              placeholder="MM/YY"
+                              maxLength={5}
+                              className="bg-zinc-900 border-zinc-800 text-white focus-visible:ring-[#3bb75e] text-sm text-center"
+                              value={cardExpiry}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, "");
+                                if (val.length >= 2) {
+                                  setCardExpiry(`${val.slice(0, 2)}/${val.slice(2, 4)}`);
+                                } else {
+                                  setCardExpiry(val);
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-zinc-400 text-[10px] uppercase font-semibold">CVV</Label>
+                            <Input
+                              required
+                              type="password"
+                              placeholder="123"
+                              maxLength={3}
+                              className="bg-zinc-900 border-zinc-800 text-white focus-visible:ring-[#3bb75e] text-sm text-center"
+                              value={cardCvv}
+                              onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ""))}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3 pt-4">
+                        <Button type="submit" className="w-full bg-[#3bb75e] hover:bg-[#3bb75e]/90 text-white font-semibold text-sm">
+                          Pay ₦{paystackRoom ? paystackRoom.price_per_term.toLocaleString() : "0"}
+                        </Button>
+                        <div className="flex justify-between items-center text-[8px] text-zinc-600">
+                          <span>Secured by Paystack SSL</span>
+                          <span className="flex items-center gap-0.5">🔒 Certified PCI-DSS</span>
+                        </div>
+                      </div>
+                    </form>
+                  )}
+
+                  {paymentMethod === "transfer" && (
+                    <div className="flex-1 flex flex-col justify-between pt-4">
+                      <div className="space-y-3 bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-xs">
+                        <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Transfer instructions</p>
+                        <p className="text-zinc-400">Transfer the exact amount below to this dynamic bank account:</p>
+                        <div className="space-y-1.5 pt-1.5 text-sm">
+                          <p><span className="text-zinc-500 text-xs">Bank Name:</span> Titan Trust Bank</p>
+                          <p><span className="text-zinc-500 text-xs">Account Number:</span> <span className="font-mono font-semibold text-white">9928172651</span></p>
+                          <p><span className="text-zinc-500 text-xs">Amount:</span> <span className="font-semibold text-[#3bb75e]">₦{paystackRoom ? paystackRoom.price_per_term.toLocaleString() : "0"}</span></p>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 pt-1.5 italic">This account number expires in 20:00 minutes.</p>
+                      </div>
+                      <div className="space-y-3 pt-4">
+                        <Button onClick={handleTransferConfirm} className="w-full bg-[#3bb75e] hover:bg-[#3bb75e]/90 text-white font-semibold text-sm">
+                          I've sent the money
+                        </Button>
+                        <div className="flex justify-between items-center text-[8px] text-zinc-600">
+                          <span>Secured by Paystack SSL</span>
+                          <span>🔒 Encrypted</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Edit Room Dialog */}
       <Dialog open={roomDialogOpen} onOpenChange={setRoomDialogOpen}>

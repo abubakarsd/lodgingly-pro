@@ -27,6 +27,11 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [openComplaint, setOpenComplaint] = useState(false);
 
+  // Roommates State
+  const [roommates, setRoommates] = useState<any[]>([]);
+  const [loadingRoommates, setLoadingRoommates] = useState(false);
+  const [roommatesDialogOpen, setRoommatesDialogOpen] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     void load();
@@ -46,6 +51,35 @@ export default function StudentDashboard() {
     setLoading(false);
   }
 
+  async function fetchRoommates() {
+    if (!allocation || !allocation.rooms) return;
+    setLoadingRoommates(true);
+    setRoommates([]);
+    
+    const { data, error } = await supabase
+      .from("allocations")
+      .select("id, bed_label, student_id, room_id");
+      
+    setLoadingRoommates(false);
+    if (error) {
+      toast({ title: "Failed to load roommates", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    const activeRoomId = allocation.rooms.id;
+    const mates = (data ?? [])
+      .filter((a: any) => a.rooms?.id === activeRoomId && a.student_id?.id !== user?.id)
+      .map((a: any) => ({
+        id: a.id,
+        bed_label: a.bed_label,
+        name: a.student_id?.full_name || "Unknown Student",
+        email: a.student_id?.email || "N/A",
+        matric: a.student_id?.matric_number || "N/A"
+      }));
+      
+    setRoommates(mates);
+  }
+
   return (
     <AppShell title="Dashboard">
       <div className="grid grid-cols-12 gap-4 md:gap-6 animate-fade-up">
@@ -61,6 +95,17 @@ export default function StudentDashboard() {
                   <h3 className="text-2xl font-semibold text-leaf-900 mt-1">{allocation.rooms.blocks.hostels.name}, {allocation.rooms.blocks.name}</h3>
                   <p className="text-sm text-leaf-700/80 mt-1">Room {allocation.rooms.room_number} • {allocation.rooms.room_type} • Bed {allocation.bed_label}</p>
                   <p className="text-xs text-leaf-700/60 mt-2">Term: {allocation.term}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setRoommatesDialogOpen(true);
+                      void fetchRoommates();
+                    }}
+                    className="mt-4 border-leaf-200 text-leaf-700 hover:bg-leaf-100/50 bg-white"
+                  >
+                    View Roommates
+                  </Button>
                 </>
               ) : (
                 <div className="mt-3">
@@ -145,6 +190,39 @@ export default function StudentDashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Roommates Directory Dialog */}
+      <Dialog open={roommatesDialogOpen} onOpenChange={setRoommatesDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Roommates Directory</DialogTitle>
+            <p className="text-xs text-muted-foreground">List of active peers assigned to your room.</p>
+          </DialogHeader>
+          <div className="py-4">
+            {loadingRoommates ? (
+              <div className="flex justify-center py-6">
+                <div className="w-6 h-6 border-2 border-t-leaf-600 border-muted rounded-full animate-spin" />
+              </div>
+            ) : roommates.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-6">No roommates allocated to this room yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {roommates.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border bg-surface/50">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold text-zinc-800">{m.name}</p>
+                      <p className="text-xs text-muted-foreground">{m.matric !== "N/A" ? `Reg: ${m.matric}` : `Email: ${m.email}`}</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-leaf-700 bg-leaf-50 px-2 py-0.5 rounded ring-1 ring-leaf-100 uppercase">
+                      Bed {m.bed_label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

@@ -365,7 +365,7 @@ app.get('/api/db/:table', (req: any, res: Response, next: NextFunction) => {
               } : null
             } : null
           };
-          delete docJson.room_id;
+          docJson.room_id = room.id;
         }
         return docJson;
       });

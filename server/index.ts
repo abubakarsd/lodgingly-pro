@@ -37,7 +37,6 @@ const connectDB = async () => {
 
 // Database connection middleware for serverless/Vercel environments
 app.use(async (req, res, next) => {
-  if (!req.url.startsWith('/api')) return next();
   try {
     await connectDB();
     next();

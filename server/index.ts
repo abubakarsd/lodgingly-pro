@@ -232,7 +232,13 @@ app.post('/api/auth/login', async (req: Response | any, res: Response) => {
 });
 
 // 3. Database: GET collections
-app.get('/api/db/:table', authenticateToken, async (req: AuthRequest | any, res: Response) => {
+app.get('/api/db/:table', (req: any, res: Response, next: NextFunction) => {
+  const { table } = req.params;
+  if (table === 'hostels') {
+    return next();
+  }
+  authenticateToken(req, res, next);
+}, async (req: AuthRequest | any, res: Response) => {
   try {
     const { table } = req.params;
     

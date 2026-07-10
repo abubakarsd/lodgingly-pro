@@ -1,22 +1,42 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check, MapPin, MessagesSquare, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { supabase } from "@/integrations/supabase/client";
 import heroEmerald from "@/assets/hostel-emerald.jpg";
 import verdant from "@/assets/hostel-verdant.jpg";
 import cedar from "@/assets/hostel-cedar.jpg";
 import ivy from "@/assets/hostel-ivy.jpg";
 import bgImage from "@/assets/bg-image.jpeg";
 
-const blocks = [
-  { name: "Umar Sulaim Hostel", meta: "North Campus • Male", img: heroEmerald },
-  { name: "Amina Hostel", meta: "South Campus • Female", img: verdant },
-  { name: "Ribadu Hostel", meta: "Central Campus • Female", img: cedar },
-  { name: "Sakawa Hostel", meta: "East Campus • Female", img: ivy },
-  { name: "Danfodio Hostel", meta: "West Campus • Male", img: heroEmerald },
-  { name: "Dangote Hostel", meta: "North Campus • Male", img: verdant },
-];
-
 export default function Landing() {
+  const [hostels, setHostels] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data, error } = await supabase.from("hostels").select("*");
+        if (error) throw error;
+        setHostels(data || []);
+      } catch (err) {
+        console.error("Error loading hostels:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    void load();
+  }, []);
+
+  const imgFor = (h: any) => {
+    if (h.image_url) return h.image_url;
+    const name = h.name.toLowerCase();
+    if (name.includes("umar") || name.includes("danfodio")) return heroEmerald;
+    if (name.includes("amina") || name.includes("dangote")) return verdant;
+    if (name.includes("ribadu")) return cedar;
+    return ivy;
+  };
+
   return (
     <div className="min-h-screen bg-surface text-foreground">
       {/* Nav */}
@@ -148,15 +168,21 @@ export default function Landing() {
             <Link to="/auth" className="text-sm font-medium text-leaf-600 flex items-center gap-1 hover:underline">View all blocks →</Link>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blocks.map((b) => (
-              <div key={b.name} className="group cursor-pointer">
-                <div className="w-full aspect-[4/5] bg-surface rounded-xl outline-1 -outline-offset-1 outline-black/5 overflow-hidden mb-4">
-                  <img src={b.img} alt={b.name} width={800} height={1000} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            {loading ? (
+              <div className="col-span-full py-8 text-center text-muted-foreground animate-pulse">Loading hostels...</div>
+            ) : hostels.length === 0 ? (
+              <div className="col-span-full py-8 text-center text-muted-foreground">No hostels available.</div>
+            ) : (
+              hostels.map((h) => (
+                <div key={h.id || h.name} className="group cursor-pointer">
+                  <div className="w-full aspect-[4/5] bg-surface rounded-xl outline-1 -outline-offset-1 outline-black/5 overflow-hidden mb-4">
+                    <img src={imgFor(h)} alt={h.name} width={800} height={1000} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                  <h4 className="font-medium">{h.name}</h4>
+                  <p className="text-sm text-muted-foreground">{h.campus || "Main"} Campus • {h.gender || "mixed"}</p>
                 </div>
-                <h4 className="font-medium">{b.name}</h4>
-                <p className="text-sm text-muted-foreground">{b.meta}</p>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </section>

@@ -53,6 +53,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// Diagnostic endpoint to check configuration and connectivity
+app.get('/api/health', async (req, res) => {
+  try {
+    const hasMongoUrl = !!process.env.MONGODB_URL;
+    const mongoUrlLength = process.env.MONGODB_URL ? process.env.MONGODB_URL.length : 0;
+    let dbStatus = "disconnected";
+    
+    if (process.env.MONGODB_URL) {
+      try {
+        await connectDB();
+        dbStatus = "connected successfully";
+      } catch (err: any) {
+        dbStatus = `connection failed: ${err.message}`;
+      }
+    } else {
+      dbStatus = "missing configuration";
+    }
+
+    res.json({
+      status: "ok",
+      hasMongoUrl,
+      mongoUrlLength,
+      dbStatus,
+      vercelEnv: !!process.env.VERCEL
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Authentication middleware
 interface AuthRequest extends Request {
   user?: {

@@ -23,6 +23,26 @@ if (!MONGODB_URL) {
 app.use(cors());
 app.use(express.json());
 
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected && mongoose.connection.readyState === 1) return;
+  await mongoose.connect(MONGODB_URL!);
+  isConnected = true;
+  console.log("Connected to MongoDB Atlas!");
+};
+
+// Database connection middleware for serverless/Vercel environments
+app.use(async (req, res, next) => {
+  if (!req.url.startsWith('/api')) return next();
+  try {
+    await connectDB();
+    next();
+  } catch (err: any) {
+    console.error("Database connection middleware error:", err);
+    res.status(500).json({ message: 'Database connection failed', error: err.message });
+  }
+});
+
 // Log incoming requests
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -56,7 +76,7 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
 };
 
 // Map URL table names to Mongoose models
-const getModel = (tableName: string) => {
+const getModel = (tableName: string): any => {
   switch (tableName) {
     case 'hostels': return Hostel;
     case 'blocks': return Block;
@@ -102,14 +122,14 @@ app.post('/api/auth/signup', async (req: Response | any, res: Response) => {
       role
     });
 
-    const token = jwt.sign({ id: user.id, role: user.role, email: user.email, matric_number: user.matric_number }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user._id, role: user.role, email: user.email, matric_number: user.matric_number }, JWT_SECRET, { expiresIn: '7d' });
 
     const sessionPayload = {
       access_token: token,
       token_type: 'bearer',
       expires_in: 604800,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email || null,
         user_metadata: {
           full_name: user.full_name,
@@ -146,19 +166,19 @@ app.post('/api/auth/login', async (req: Response | any, res: Response) => {
       return res.status(400).json({ message: 'Invalid registration number/email or password' });
     }
 
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = await bcrypt.compare(password, user.password as string);
     if (!validPassword) {
       return res.status(400).json({ message: 'Invalid registration number/email or password' });
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role, email: user.email, matric_number: user.matric_number }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user._id, role: user.role, email: user.email, matric_number: user.matric_number }, JWT_SECRET, { expiresIn: '7d' });
 
     const sessionPayload = {
       access_token: token,
       token_type: 'bearer',
       expires_in: 604800,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email || null,
         user_metadata: {
           full_name: user.full_name,
@@ -205,7 +225,7 @@ app.get('/api/db/:table', authenticateToken, async (req: AuthRequest | any, res:
 
       const profile = await User.findById(queryId);
       if (!profile) return res.json([]);
-      return res.json([{ role: profile.role, user_id: profile.id }]);
+      return res.json([{ role: profile.role, user_id: profile._id }]);
     }
 
     const Model = getModel(table);
@@ -425,17 +445,18 @@ app.delete('/api/db/:table', authenticateToken, async (req: AuthRequest | any, r
   }
 });
 
-// Connect to MongoDB & Seed Database
-mongoose.connect(MONGODB_URL)
-  .then(async () => {
-    console.log("Successfully connected to MongoDB Atlas!");
-    await seedDatabase();
-    
-    app.listen(PORT, () => {
-      console.log(`Backend Server is running on http://localhost:${PORT}`);
+if (!process.env.VERCEL) {
+  connectDB()
+    .then(async () => {
+      await seedDatabase();
+      app.listen(PORT, () => {
+        console.log(`Backend Server is running on http://localhost:${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error("Local server startup failed:", err);
+      process.exit(1);
     });
-  })
-  .catch((err) => {
-    console.error("MongoDB Atlas connection error:", err);
-    process.exit(1);
-  });
+}
+
+export default app;

@@ -13,9 +13,9 @@ import { Bed, Users } from "lucide-react";
 
 const imgFor = (name: string) => {
   const n = name.toLowerCase();
-  if (n.includes("emerald")) return heroEmerald;
-  if (n.includes("verdant")) return verdant;
-  if (n.includes("cedar")) return cedar;
+  if (n.includes("umar") || n.includes("danfodio")) return heroEmerald;
+  if (n.includes("amina") || n.includes("dangote")) return verdant;
+  if (n.includes("ribadu")) return cedar;
   return ivy;
 };
 

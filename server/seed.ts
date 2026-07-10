@@ -22,32 +22,34 @@ export async function seedDatabase() {
     console.log("No hostels found. Seeding hostels, blocks, and rooms...");
 
     const hostelsData = [
-      { name: 'Emerald Hall', description: 'Modern residence with study lounges and gym access.', campus: 'North Campus', gender: 'mixed' },
-      { name: 'Verdant Wing', description: 'Quiet residence close to the library.', campus: 'South Campus', gender: 'female' },
-      { name: 'Cedar Commons', description: 'Community-focused living with shared kitchens.', campus: 'Central Campus', gender: 'male' },
-      { name: 'Ivy Pavilion', description: 'Premium en-suite rooms with courtyard views.', campus: 'West Campus', gender: 'mixed' }
+      { name: 'Umar Sulaim Hostel', description: 'Modern residence with study lounges and gym access.', campus: 'North Campus', gender: 'male' },
+      { name: 'Amina Hostel', description: 'Quiet residence close to the library.', campus: 'South Campus', gender: 'female' },
+      { name: 'Ribadu Hostel', description: 'Community-focused living with shared kitchens.', campus: 'Central Campus', gender: 'female' },
+      { name: 'Sakawa Hostel', description: 'Premium en-suite rooms with courtyard views.', campus: 'East Campus', gender: 'female' },
+      { name: 'Danfodio Hostel', description: 'Traditional courtyard-style hall of residence.', campus: 'West Campus', gender: 'male' },
+      { name: 'Dangote Hostel', description: 'Ultra-modern hostel with laundry and retail options.', campus: 'North Campus', gender: 'male' }
     ] as const;
 
     for (const hData of hostelsData) {
       const hostel = await Hostel.create(hData);
-      console.log(`Created Hostel: ${hostel.name} (${hostel.id})`);
+      console.log(`Created Hostel: ${hostel.name} (${hostel._id})`);
 
       const block = await Block.create({
-        hostel_id: hostel.id,
+        hostel_id: hostel._id,
         name: 'Block A',
         floors: 4
       });
-      console.log(`  Created Block: ${block.name} (${block.id})`);
+      console.log(`  Created Block: ${block.name} (${block._id})`);
 
       for (let i = 1; i <= 8; i++) {
         const room = await Room.create({
-          block_id: block.id,
+          block_id: block._id,
           room_number: (100 + i).toString(),
           capacity: 2,
           room_type: 'Shared Ensuite',
           price_per_term: 1200
         });
-        console.log(`    Created Room: ${room.room_number} (${room.id})`);
+        console.log(`    Created Room: ${room.room_number} (${room._id})`);
       }
     }
   } else {
@@ -92,8 +94,7 @@ export async function seedDatabase() {
   console.log("Database seed check complete.");
 }
 
-import { fileURLToPath } from 'url';
-const isMain = process.argv[1] && (fileURLToPath(import.meta.url) === process.argv[1] || process.argv[1].endsWith('seed.ts'));
+const isMain = process.argv[1] && process.argv[1].endsWith('seed.ts');
 if (isMain) {
   mongoose.connect(MONGODB_URL)
     .then(async () => {

@@ -1,8 +1,8 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, SchemaOptions } from 'mongoose';
 import { randomUUID } from 'crypto';
 
 // Reusable schema options to convert _id to id in JSON output
-const schemaOptions = {
+const schemaOptions: any = {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
   toJSON: {
     virtuals: true,

@@ -187,6 +187,7 @@ app.post('/api/auth/login', async (req: Response | any, res: Response) => {
   try {
     const { email, password } = req.body;
     const searchVal = (email || '').trim();
+    console.log(`[Login Attempt] searchVal: "${searchVal}", passwordLength: ${password ? password.length : 0}`);
 
     // Look up by email or matric_number (case insensitive)
     const user = await User.findOne({
@@ -197,11 +198,13 @@ app.post('/api/auth/login', async (req: Response | any, res: Response) => {
     });
 
     if (!user) {
+      console.log(`[Login Failed] User not found for: "${searchVal}"`);
       return res.status(400).json({ message: 'Invalid registration number/email or password' });
     }
 
     const validPassword = await bcrypt.compare(password, user.password as string);
     if (!validPassword) {
+      console.log(`[Login Failed] Password mismatch for: "${searchVal}"`);
       return res.status(400).json({ message: 'Invalid registration number/email or password' });
     }
 

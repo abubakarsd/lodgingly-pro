@@ -22,37 +22,7 @@ if (!MONGODB_URL) {
 app.use(cors());
 app.use(express.json());
 
-let isConnected = false;
-const connectDB = async () => {
-  if (!MONGODB_URL) {
-    throw new Error("MONGODB_URL environment variable is not configured. Please add it to your server configuration.");
-  }
-  if (isConnected && mongoose.connection.readyState === 1) return;
-  await mongoose.connect(MONGODB_URL, {
-    serverSelectionTimeoutMS: 15000, // Timeout after 15s instead of hanging
-  });
-  isConnected = true;
-  console.log("Connected to MongoDB Atlas!");
-};
-
-// Database connection middleware for serverless/Vercel environments
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err: any) {
-    console.error("Database connection middleware error:", err);
-    res.status(500).json({ message: 'Database connection failed', error: err.message });
-  }
-});
-
-// Log incoming requests
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
-
-// Diagnostic endpoint to check configuration and connectivity
+// Diagnostic endpoint to check configuration and connectivity (placed before middleware to bypass db connection checks if they hang)
 app.get('/api/health', async (req, res) => {
   try {
     const hasMongoUrl = !!process.env.MONGODB_URL;
@@ -80,6 +50,36 @@ app.get('/api/health', async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+let isConnected = false;
+const connectDB = async () => {
+  if (!MONGODB_URL) {
+    throw new Error("MONGODB_URL environment variable is not configured. Please add it to your server configuration.");
+  }
+  if (isConnected && mongoose.connection.readyState === 1) return;
+  await mongoose.connect(MONGODB_URL, {
+    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of hanging (to prevent exceeding Vercel's 10s limit)
+  });
+  isConnected = true;
+  console.log("Connected to MongoDB Atlas!");
+};
+
+// Database connection middleware for serverless/Vercel environments
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err: any) {
+    console.error("Database connection middleware error:", err);
+    res.status(500).json({ message: 'Database connection failed', error: err.message });
+  }
+});
+
+// Log incoming requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
 });
 
 // Authentication middleware

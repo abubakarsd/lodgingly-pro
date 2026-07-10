@@ -40,6 +40,12 @@ const App = () => (
             <Route path="/dashboard" element={<Protected><StudentDashboard /></Protected>} />
             <Route path="/accommodation" element={<Protected><Accommodation /></Protected>} />
             <Route path="/admin" element={<Protected admin><AdminDashboard /></Protected>} />
+            <Route path="/clearance" element={<Protected><Clearance /></Protected>} />
+            <Route path="/users" element={<Protected admin><Users /></Protected>} />
+            <Route path="/allocations" element={<Protected admin><Allocations /></Protected>} />
+            <Route path="/complaints" element={<Protected><Complaints /></Protected>} />
+            <Route path="/messages" element={<Protected><Messages /></Protected>} />
+            <Route path="/notifications" element={<Protected><Notifications /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

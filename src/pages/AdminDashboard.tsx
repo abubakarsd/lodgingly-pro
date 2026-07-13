@@ -3,28 +3,58 @@ import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Bed, Building2, Users, Wrench } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/hooks/useAuth";
 
 type Stat = { label: string; value: string; hint?: string; Icon: any };
 
 export default function AdminDashboard() {
+  const { role, user } = useAuth();
   const [stats, setStats] = useState<Stat[]>([]);
   const [occupancy, setOccupancy] = useState<{ hostel: string; occ: number; total: number }[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
+  const [myStudents, setMyStudents] = useState<any[]>([]);
+  const [myHostel, setMyHostel] = useState<any>(null);
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { if (user) void load(); }, [user, role]);
 
   async function load() {
     const [rooms, alloc, hostels, blocks, comps] = await Promise.all([
-      supabase.from("rooms").select("id, capacity, block_id"),
-      supabase.from("allocations").select("id, room_id, status").eq("status", "active"),
-      supabase.from("hostels").select("id, name"),
-      supabase.from("blocks").select("id, hostel_id"),
+      supabase.from("rooms").select("*"),
+      supabase.from("allocations").select("*").eq("status", "active"),
+      supabase.from("hostels").select("*"),
+      supabase.from("blocks").select("*"),
       supabase.from("complaints").select("id, title, priority, status, created_at").order("created_at", { ascending: false }).limit(6),
     ]);
 
+    if (role === "hall_admin") {
+      const myHostelId = user?.user_metadata?.hostel_id || (user as any)?.hostel_id;
+      const myHostelData = (hostels.data ?? []).find((h: any) => h.id === myHostelId);
+      setMyHostel(myHostelData);
+
+      const myBlocks = (blocks.data ?? []).filter((b: any) => b.hostel_id === myHostelId);
+      const myBlockIds = new Set(myBlocks.map((b: any) => b.id));
+      const myRooms = (rooms.data ?? []).filter((r: any) => myBlockIds.has(r.block_id));
+      const myRoomIds = new Set(myRooms.map((r: any) => r.id));
+      const myAllocations = (alloc.data ?? []).filter((a: any) => myRoomIds.has(a.room_id) || (a.rooms && a.rooms.blocks && a.rooms.blocks.hostels && a.rooms.blocks.hostels.id === myHostelId));
+
+      const totalBeds = myRooms.reduce((s, r: any) => s + r.capacity, 0);
+      const occupied = myAllocations.length;
+
+      setStats([
+        { label: "Total Occupancy", value: `${totalBeds ? Math.round((occupied / totalBeds) * 100) : 0}%`, hint: `${occupied}/${totalBeds} beds taken`, Icon: Users },
+        { label: "Blocks", value: String(myBlocks.length), Icon: Building2 },
+        { label: "Rooms", value: String(myRooms.length), Icon: Bed },
+        { label: "Total Beds", value: String(totalBeds), Icon: Bed },
+      ]);
+
+      setMyStudents(myAllocations);
+      return;
+    }
+
     const totalBeds = (rooms.data ?? []).reduce((s, r: any) => s + r.capacity, 0);
     const occupied = (alloc.data ?? []).length;
-    // @ts-ignore - Supabase select allows 2 arguments for count queries
+    // @ts-ignore
     const openTickets = (await supabase.from("complaints").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"])).count ?? 0;
 
     setStats([
@@ -52,6 +82,64 @@ export default function AdminDashboard() {
     });
     setOccupancy((hostels.data ?? []).map((h: any) => ({ hostel: h.name, ...per.get(h.id)! })));
     setComplaints(comps.data ?? []);
+  }
+
+  if (role === "hall_admin") {
+    return (
+      <AppShell title="My Hostel Overview">
+        <div className="space-y-6 animate-fade-up">
+          {myHostel && (
+            <div>
+              <h2 className="text-2xl font-bold">{myHostel.name}</h2>
+              <p className="text-muted-foreground">{myHostel.description}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {stats.map((s) => (
+              <Card key={s.label} className="p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{s.label}</span>
+                  <s.Icon className="size-4 text-leaf-700" />
+                </div>
+                <p className="text-2xl font-semibold mt-2">{s.value}</p>
+                {s.hint && <p className="text-xs text-muted-foreground mt-1">{s.hint}</p>}
+              </Card>
+            ))}
+          </div>
+
+          <Card className="p-6">
+            <h3 className="font-semibold text-lg mb-4">Allocated Students</h3>
+            {myStudents.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No students allocated yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Matric No.</TableHead>
+                      <TableHead>Room</TableHead>
+                      <TableHead>Block</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {myStudents.map((a: any) => (
+                      <TableRow key={a.id}>
+                        <TableCell className="font-medium">{a.student_id?.full_name}</TableCell>
+                        <TableCell>{a.student_id?.matric_number}</TableCell>
+                        <TableCell>{a.rooms?.room_number}</TableCell>
+                        <TableCell>{a.rooms?.blocks?.name}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </Card>
+        </div>
+      </AppShell>
+    );
   }
 
   return (

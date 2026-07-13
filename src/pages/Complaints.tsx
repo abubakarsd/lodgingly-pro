@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui/card";
@@ -49,8 +50,12 @@ export default function Complaints() {
   const [selectedItem, setSelectedItem] = useState<ComplaintRecord | null>(null);
 
   useEffect(() => {
-    if (user) void load();
+    if (user && role !== "hall_admin") void load();
   }, [user, role]);
+
+  if (role === "hall_admin") {
+    return <Navigate to="/admin" replace />;
+  }
 
   async function load() {
     setLoading(true);

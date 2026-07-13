@@ -29,7 +29,6 @@ const hallAdminNav = [
   { to: "/accommodation", label: "My Hostel", Icon: Building2 },
   { to: "/clearance", label: "Clearance", Icon: FileText },
   { to: "/allocations", label: "Allocations", Icon: Building2 },
-  { to: "/complaints", label: "Complaints", Icon: MessageCircle },
   { to: "/settings", label: "Settings", Icon: Settings },
 ];
 

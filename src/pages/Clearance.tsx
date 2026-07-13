@@ -270,7 +270,7 @@ export default function Clearance() {
   return (
     <AppShell title="Clearance System">
       <div className="space-y-6 animate-fade-up">
-        {role !== "admin" ? (
+        {role === "student" ? (
           <div className="grid grid-cols-12 gap-6">
             {/* Student Left: Request Form */}
             <Card className="col-span-12 md:col-span-5 lg:col-span-4 p-6 self-start">
@@ -361,55 +361,59 @@ export default function Clearance() {
             
             {/* Admin Left: Manage Requirements */}
             <Card className="col-span-12 md:col-span-5 lg:col-span-4 p-6 self-start">
-              <div className="flex justify-between items-center mb-1">
-                <h3 className="font-semibold text-lg">{editingReqId ? "Edit Requirement" : "Add Requirement"}</h3>
-                {editingReqId && (
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    setEditingReqId(null);
-                    setNewReqName("");
-                    setNewReqDesc("");
-                    setNewReqRequiresFile(false);
-                  }}>Cancel</Button>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">Define a new clearance rule.</p>
-              
-              <form onSubmit={handleAddRequirement} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input placeholder="e.g. Identity Card Return" value={newReqName} onChange={e => setNewReqName(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea placeholder="Explain what the student needs to do..." value={newReqDesc} onChange={e => setNewReqDesc(e.target.value)} rows={2} />
-                </div>
-                <div className="flex items-center space-x-2 py-2">
-                  <Switch id="req-file" checked={newReqRequiresFile} onCheckedChange={setNewReqRequiresFile} />
-                  <Label htmlFor="req-file">Requires File Upload</Label>
-                </div>
-                
-                {newReqRequiresFile && (
-                  <div className="space-y-2 pb-2">
-                    <Label>Allowed File Type</Label>
-                    <Select value={newReqFileType} onValueChange={(v: any) => setNewReqFileType(v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="any">Any Document</SelectItem>
-                        <SelectItem value="image">Image (Picture)</SelectItem>
-                        <SelectItem value="pdf">PDF Document</SelectItem>
-                      </SelectContent>
-                    </Select>
+              {role === "admin" && (
+                <>
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="font-semibold text-lg">{editingReqId ? "Edit Requirement" : "Add Requirement"}</h3>
+                    {editingReqId && (
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        setEditingReqId(null);
+                        setNewReqName("");
+                        setNewReqDesc("");
+                        setNewReqRequiresFile(false);
+                      }}>Cancel</Button>
+                    )}
                   </div>
-                )}
-                
-                <Button type="submit" className="w-full" disabled={addingReq}>
-                  {addingReq ? <Loader2 className="size-4 mr-2 animate-spin" /> : editingReqId ? <Pencil className="size-4 mr-2" /> : <Plus className="size-4 mr-2" />}
-                  {editingReqId ? "Update Requirement" : "Create Requirement"}
-                </Button>
-              </form>
+                  <p className="text-sm text-muted-foreground mb-4">Define a new clearance rule.</p>
+                  
+                  <form onSubmit={handleAddRequirement} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Name</Label>
+                      <Input placeholder="e.g. Identity Card Return" value={newReqName} onChange={e => setNewReqName(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Textarea placeholder="Explain what the student needs to do..." value={newReqDesc} onChange={e => setNewReqDesc(e.target.value)} rows={2} />
+                    </div>
+                    <div className="flex items-center space-x-2 py-2">
+                      <Switch id="req-file" checked={newReqRequiresFile} onCheckedChange={setNewReqRequiresFile} />
+                      <Label htmlFor="req-file">Requires File Upload</Label>
+                    </div>
+                    
+                    {newReqRequiresFile && (
+                      <div className="space-y-2 pb-2">
+                        <Label>Allowed File Type</Label>
+                        <Select value={newReqFileType} onValueChange={(v: any) => setNewReqFileType(v)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="any">Any Document</SelectItem>
+                            <SelectItem value="image">Image (Picture)</SelectItem>
+                            <SelectItem value="pdf">PDF Document</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    
+                    <Button type="submit" className="w-full" disabled={addingReq}>
+                      {addingReq ? <Loader2 className="size-4 mr-2 animate-spin" /> : editingReqId ? <Pencil className="size-4 mr-2" /> : <Plus className="size-4 mr-2" />}
+                      {editingReqId ? "Update Requirement" : "Create Requirement"}
+                    </Button>
+                  </form>
+                </>
+              )}
 
               {requirements.length > 0 && (
-                <div className="mt-8">
+                <div className={role === "admin" ? "mt-8" : ""}>
                   <h4 className="font-medium text-sm mb-3">Active Requirements</h4>
                   <div className="space-y-2">
                     {requirements.map(r => (
@@ -420,14 +424,16 @@ export default function Clearance() {
                         </div>
                         {r.description && <p className="text-muted-foreground mt-1 text-xs pr-12">{r.description}</p>}
                         
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex bg-surface shadow-sm rounded-md border">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditRequirement(r)}>
-                            <Pencil className="size-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleDeleteRequirement(r.id)}>
-                            <Trash className="size-3" />
-                          </Button>
-                        </div>
+                        {role === "admin" && (
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex bg-surface shadow-sm rounded-md border">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditRequirement(r)}>
+                              <Pencil className="size-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleDeleteRequirement(r.id)}>
+                              <Trash className="size-3" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

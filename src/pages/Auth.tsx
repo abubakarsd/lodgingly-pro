@@ -18,6 +18,7 @@ export default function Auth() {
   const [regNumber, setRegNumber] = useState("");
   const [studentPassword, setStudentPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [department, setDepartment] = useState("");
   const [isStudentSignup, setIsStudentSignup] = useState(false);
 
   // Admin states
@@ -51,13 +52,13 @@ export default function Auth() {
       password: studentPassword,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: { full_name: fullName, matric_number: regNumber.trim().toUpperCase() }
+        data: { full_name: fullName, matric_number: regNumber.trim().toUpperCase(), program: department }
       },
     });
 
     if (!error && data?.user) {
       // Best effort to update matric_number in the profile
-      await supabase.from("profiles").update({ matric_number: regNumber.trim().toUpperCase() }).eq("id", data.user.id);
+      await supabase.from("profiles").update({ matric_number: regNumber.trim().toUpperCase(), program: department }).eq("id", data.user.id);
     }
 
     setBusy(false);
@@ -130,6 +131,10 @@ export default function Auth() {
                     <div className="space-y-2">
                       <Label>Registration Number</Label>
                       <Input required placeholder="e.g. U16CSC206" value={regNumber} onChange={(e) => setRegNumber(e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Department</Label>
+                      <Input required placeholder="e.g. Computer Science" value={department} onChange={(e) => setDepartment(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label>Password</Label>

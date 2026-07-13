@@ -32,7 +32,8 @@ const UserSchema = new Schema({
   phone: { type: String },
   program: { type: String },
   avatar_url: { type: String },
-  role: { type: String, enum: ['student', 'admin'], default: 'student' }
+  role: { type: String, enum: ['student', 'admin', 'hall_admin'], default: 'student' },
+  hostel_id: { type: String, ref: 'Hostel' } // Used for hall_admin to scope their access
 }, {
   ...schemaOptions,
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
@@ -87,6 +88,7 @@ const AllocationSchema = new Schema({
   bed_label: { type: String, required: true },
   term: { type: String, required: true },
   status: { type: String, enum: ['active', 'expired', 'cancelled'], default: 'active' },
+  payment_status: { type: String, enum: ['paid', 'not_paid'], default: 'not_paid' },
   allocated_at: { type: Date, default: Date.now }
 }, { ...schemaOptions, timestamps: { createdAt: 'created_at', updatedAt: false } });
 export const Allocation = (mongoose.models.Allocation || mongoose.model('Allocation', AllocationSchema)) as any;
@@ -100,7 +102,8 @@ const ComplaintSchema = new Schema({
   description: { type: String, required: true },
   image_url: { type: String },
   priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
-  status: { type: String, enum: ['open', 'in_progress', 'resolved', 'closed'], default: 'open' }
+  status: { type: String, enum: ['open', 'in_progress', 'resolved', 'closed'], default: 'open' },
+  hostel_id: { type: String, ref: 'Hostel' }
 }, schemaOptions);
 export const Complaint = (mongoose.models.Complaint || mongoose.model('Complaint', ComplaintSchema)) as any;
 
@@ -140,6 +143,9 @@ const ClearanceItemSchema = new Schema({
   requirement_id: { type: String, ref: 'ClearanceRequirement' },
   item: { type: String, required: true }, // Keeping for backwards compatibility
   attachment_url: { type: String }, // Used to store Base64 string for file uploads
+  room_number: { type: String },
+  matric_number: { type: String },
+  hostel_id: { type: String, ref: 'Hostel' },
   status: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
   verified_by: { type: String, ref: 'User' }
 }, schemaOptions);

@@ -74,7 +74,8 @@ export default function StudentDashboard() {
         bed_label: a.bed_label,
         name: a.student_id?.full_name || "Unknown Student",
         email: a.student_id?.email || "N/A",
-        matric: a.student_id?.matric_number || "N/A"
+        matric: a.student_id?.matric_number || "N/A",
+        program: a.student_id?.program || "Unspecified Department"
       }));
       
     setRoommates(mates);
@@ -212,6 +213,7 @@ export default function StudentDashboard() {
                     <div className="space-y-0.5">
                       <p className="text-sm font-semibold text-zinc-800">{m.name}</p>
                       <p className="text-xs text-muted-foreground">{m.matric !== "N/A" ? `Reg: ${m.matric}` : `Email: ${m.email}`}</p>
+                      <p className="text-xs text-leaf-700 font-medium">{m.program}</p>
                     </div>
                     <span className="text-[10px] font-bold text-leaf-700 bg-leaf-50 px-2 py-0.5 rounded ring-1 ring-leaf-100 uppercase">
                       Bed {m.bed_label}

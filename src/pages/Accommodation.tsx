@@ -119,7 +119,7 @@ export default function Accommodation() {
       supabase.from("hostels").select("*").order("name"),
       supabase.from("blocks").select("id, name, hostel_id"),
       supabase.from("rooms").select("id, room_number, capacity, room_type, price_per_term, block_id"),
-      user ? supabase.from("allocations").select("id, room_id, bed_label").eq("student_id", user.id).eq("status", "active").maybeSingle() : Promise.resolve({ data: null }),
+      user ? supabase.from("allocations").select("id, room_id, bed_label, payment_status, rooms").eq("student_id", user.id).eq("status", "active").maybeSingle() : Promise.resolve({ data: null }),
     ]);
     // count active allocations per room
     const { data: taken } = await supabase.from("allocations").select("room_id").eq("status", "active");
@@ -166,7 +166,7 @@ export default function Accommodation() {
     setBusyRoom(room.id);
     const bed = String.fromCharCode(65 + room.taken); // A, B, C
     const { error } = await supabase.from("allocations").insert({
-      student_id: user!.id, room_id: room.id, bed_label: bed, term: "2026/27", status: "active",
+      student_id: user!.id, room_id: room.id, bed_label: bed, term: "2026/27", status: "active", payment_status: "paid"
     });
     setBusyRoom(null);
     if (error) {
@@ -177,8 +177,15 @@ export default function Accommodation() {
     void load();
   }
 
-  const shown = blocks.filter((b) => b.hostel_id === selected);
-  const active = hostels.find((h) => h.id === selected);
+  // If student has an active paid allocation, restrict the visible hostels
+  const visibleHostels = (role === "student" && existing && existing.payment_status === 'paid')
+    ? hostels.filter(h => h.id === existing.rooms?.blocks?.hostels?.id)
+    : (role === "hall_admin" && user?.user_metadata?.hostel_id)
+      ? hostels.filter(h => h.id === user.user_metadata.hostel_id)
+      : hostels;
+
+  const active = visibleHostels.find((h) => h.id === selected) || visibleHostels[0];
+  const shown = blocks.filter((b) => b.hostel_id === active?.id);
 
   // Initialize Hostel form fields when active changes or dialog opens
   useEffect(() => {
@@ -424,10 +431,10 @@ export default function Accommodation() {
               </Button>
             )}
           </div>
-          {hostels.map((h) => (
+          {visibleHostels.map((h) => (
             <button key={h.id} onClick={() => setSelected(h.id)}
               className={`w-full text-left rounded-xl overflow-hidden border transition-all ${
-                selected === h.id ? "border-leaf-500 ring-2 ring-leaf-100" : "border-border hover:border-leaf-200"
+                (active?.id === h.id) ? "border-leaf-500 ring-2 ring-leaf-100" : "border-border hover:border-leaf-200"
               }`}>
               <div className="aspect-[16/9] overflow-hidden bg-surface">
                 <img src={imgFor(h)} alt={h.name} loading="lazy" className="w-full h-full object-cover" />

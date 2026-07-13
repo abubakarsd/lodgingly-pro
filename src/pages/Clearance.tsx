@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle2, AlertCircle, HelpCircle, Loader2, Plus, FileText, Image as ImageIcon } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { CheckCircle2, AlertCircle, HelpCircle, Loader2, Plus, FileText, Image as ImageIcon, Paperclip } from "lucide-react";
 
 type ClearanceRequirement = {
   id: string;
@@ -43,6 +43,9 @@ type ClearanceItem = {
     id: string;
     full_name: string;
   } | string | null;
+  room_number?: string;
+  matric_number?: string;
+  hostel_id?: string;
   created_at?: string;
 };
 
@@ -123,12 +126,26 @@ export default function Clearance() {
 
     setSubmitting(true);
     try {
+      // Fetch active allocation to attach room info
+      const { data: alloc } = await supabase
+        .from("allocations")
+        .select("rooms")
+        .eq("student_id", user?.id)
+        .eq("status", "active")
+        .maybeSingle();
+      
+      const r_num = (alloc as any)?.rooms?.room_number || "Unknown";
+      const h_id = (alloc as any)?.rooms?.blocks?.hostel_id || null; // Mock may not resolve deeply, but let's try
+      
       const { error } = await supabase.from("clearance_items").insert({
         student_id: user?.id,
         requirement_id: req.id,
         item: req.name, // Fallback property
         attachment_url: attachmentBase64,
         status: "pending",
+        room_number: r_num,
+        matric_number: user?.user_metadata?.matric_number || "N/A",
+        hostel_id: user?.user_metadata?.hostel_id || h_id
       });
       if (error) throw error;
       
@@ -440,9 +457,11 @@ export default function Clearance() {
                   <div className="text-muted-foreground">Name</div>
                   <div className="font-medium">{typeof selectedItem.student_id === "object" ? selectedItem.student_id?.full_name : "-"}</div>
                   <div className="text-muted-foreground">Matric No.</div>
-                  <div className="font-medium">{typeof selectedItem.student_id === "object" ? selectedItem.student_id?.matric_number : "-"}</div>
+                  <div className="font-medium">{typeof selectedItem.student_id === "object" ? selectedItem.student_id?.matric_number : (selectedItem.matric_number || "-")}</div>
                   <div className="text-muted-foreground">Email</div>
                   <div className="font-medium">{typeof selectedItem.student_id === "object" ? selectedItem.student_id?.email : "-"}</div>
+                  <div className="text-muted-foreground">Room No.</div>
+                  <div className="font-medium">{selectedItem.room_number || "-"}</div>
                 </div>
               </div>
 

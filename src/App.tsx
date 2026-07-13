@@ -15,6 +15,7 @@ import Allocations from "./pages/Allocations";
 import Complaints from "./pages/Complaints";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
+import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/complaints" element={<Protected><Complaints /></Protected>} />
             <Route path="/messages" element={<Protected><Messages /></Protected>} />
             <Route path="/notifications" element={<Protected><Notifications /></Protected>} />
+            <Route path="/settings" element={<Protected><AdminSettings /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

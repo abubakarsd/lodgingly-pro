@@ -88,6 +88,7 @@ interface AuthRequest extends Request {
     id: string;
     role: string;
     email: string;
+    hostel_id?: string;
   };
 }
 
@@ -127,7 +128,7 @@ const getModel = (tableName: string): any => {
 // 1. Auth: Signup
 app.post('/api/auth/signup', async (req: Response | any, res: Response) => {
   try {
-    const { email, password, fullName, matricNumber } = req.body;
+    const { email, password, fullName, matricNumber, program } = req.body;
 
     if (matricNumber) {
       const existingUser = await User.findOne({ matric_number: matricNumber.trim().toUpperCase() });
@@ -153,10 +154,11 @@ app.post('/api/auth/signup', async (req: Response | any, res: Response) => {
       matric_number: matricNumber ? matricNumber.trim().toUpperCase() : undefined,
       password: hashedPassword,
       full_name: fullName || (email ? email.split('@')[0] : matricNumber),
+      program,
       role
     });
 
-    const token = jwt.sign({ id: user._id, role: user.role, email: user.email, matric_number: user.matric_number }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user._id, role: user.role, email: user.email, matric_number: user.matric_number, hostel_id: user.hostel_id }, JWT_SECRET, { expiresIn: '7d' });
 
     const sessionPayload = {
       access_token: token,
@@ -167,7 +169,8 @@ app.post('/api/auth/signup', async (req: Response | any, res: Response) => {
         email: user.email || null,
         user_metadata: {
           full_name: user.full_name,
-          matric_number: user.matric_number || null
+          matric_number: user.matric_number || null,
+          hostel_id: user.hostel_id || null
         }
       }
     };
@@ -208,7 +211,7 @@ app.post('/api/auth/login', async (req: Response | any, res: Response) => {
       return res.status(400).json({ message: 'Invalid registration number/email or password' });
     }
 
-    const token = jwt.sign({ id: user._id, role: user.role, email: user.email, matric_number: user.matric_number }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user._id, role: user.role, email: user.email, matric_number: user.matric_number, hostel_id: user.hostel_id }, JWT_SECRET, { expiresIn: '7d' });
 
     const sessionPayload = {
       access_token: token,
@@ -219,7 +222,8 @@ app.post('/api/auth/login', async (req: Response | any, res: Response) => {
         email: user.email || null,
         user_metadata: {
           full_name: user.full_name,
-          matric_number: user.matric_number || null
+          matric_number: user.matric_number || null,
+          hostel_id: user.hostel_id || null
         }
       }
     };
@@ -231,6 +235,22 @@ app.post('/api/auth/login', async (req: Response | any, res: Response) => {
   } catch (error: any) {
     console.error('Login error:', error);
     res.status(500).json({ message: error.message || 'Error authenticating user' });
+  }
+});
+
+// 2.5 Auth: Password Change
+app.patch('/api/auth/password', authenticateToken, async (req: AuthRequest | any, res: Response) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.findByIdAndUpdate(req.user.id, { password: hashedPassword });
+    res.json({ message: 'Password updated successfully' });
+  } catch (error: any) {
+    console.error('Password change error:', error);
+    res.status(500).json({ message: 'Failed to update password' });
   }
 });
 
@@ -268,7 +288,7 @@ app.get('/api/db/:table', (req: any, res: Response, next: NextFunction) => {
 
       const profile = await User.findById(queryId);
       if (!profile) return res.json([]);
-      return res.json([{ role: profile.role, user_id: profile._id }]);
+      return res.json([{ role: profile.role, user_id: profile._id, hostel_id: profile.hostel_id }]);
     }
 
     const Model = getModel(table);
@@ -290,6 +310,13 @@ app.get('/api/db/:table', (req: any, res: Response, next: NextFunction) => {
         } else if (filter.op === 'in') {
           mongoQuery[fieldName] = { $in: filter.value };
         }
+      }
+    }
+
+    // Auto-filter for hall_admin on specific tables
+    if (req.user?.role === 'hall_admin' && req.user?.hostel_id) {
+      if (['clearance_items', 'complaints', 'blocks'].includes(table)) {
+        mongoQuery['hostel_id'] = req.user.hostel_id;
       }
     }
 

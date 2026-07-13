@@ -137,7 +137,7 @@ export const supabase = {
 
     async signUp({ email, password, options }: any) {
       try {
-        const payload: any = { password, fullName: options?.data?.full_name };
+        const payload: any = { password, fullName: options?.data?.full_name, program: options?.data?.program };
         if (email.includes('@')) {
           payload.email = email;
         } else {

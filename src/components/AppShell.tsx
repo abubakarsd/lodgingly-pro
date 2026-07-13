@@ -21,12 +21,22 @@ const adminNav = [
   { to: "/allocations", label: "Allocations", Icon: Building2 },
   { to: "/complaints", label: "Complaints", Icon: MessageCircle },
   { to: "/messages", label: "Messages", Icon: MessageSquare },
+  { to: "/settings", label: "Settings", Icon: Settings },
+];
+
+const hallAdminNav = [
+  { to: "/admin", label: "Overview", Icon: LayoutDashboard },
+  { to: "/accommodation", label: "My Hostel", Icon: Building2 },
+  { to: "/clearance", label: "Clearance", Icon: FileText },
+  { to: "/allocations", label: "Allocations", Icon: Building2 },
+  { to: "/complaints", label: "Complaints", Icon: MessageCircle },
+  { to: "/settings", label: "Settings", Icon: Settings },
 ];
 
 export function AppShell({ children, title }: { children: ReactNode; title: string }) {
   const { role, signOut, user } = useAuth();
   const nav = useNavigate();
-  const items = role === "admin" ? adminNav : studentNav;
+  const items = role === "admin" ? adminNav : role === "hall_admin" ? hallAdminNav : studentNav;
 
   return (
     <div className="min-h-screen bg-surface flex">

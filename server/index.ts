@@ -254,6 +254,39 @@ app.patch('/api/auth/password', authenticateToken, async (req: AuthRequest | any
   }
 });
 
+// 2.6 Admin: Create User
+app.post('/api/admin/users', authenticateToken, async (req: AuthRequest | any, res: Response) => {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden: Only Ultimate Admin can create users' });
+    }
+    const { email, password, fullName, role, matricNumber, hostel_id } = req.body;
+    if (!email || !password || !fullName || !role) {
+      return res.status(400).json({ message: 'All fields are required (email, password, fullName, role)' });
+    }
+    
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email is already registered' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      full_name: fullName,
+      matric_number: matricNumber,
+      role: role,
+      hostel_id: hostel_id || undefined
+    });
+    
+    res.status(201).json({ message: 'User created successfully', user });
+  } catch (error: any) {
+    console.error('Create User error:', error);
+    res.status(500).json({ message: error.message || 'Error creating user' });
+  }
+});
+
 // 3. Database: GET collections
 app.get('/api/db/:table', (req: any, res: Response, next: NextFunction) => {
   const { table } = req.params;

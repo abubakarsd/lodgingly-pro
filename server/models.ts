@@ -27,7 +27,7 @@ const UserSchema = new Schema({
   _id: { type: String, default: () => randomUUID() },
   email: { type: String, unique: true, sparse: true },
   password: { type: String, required: true },
-  full_name: { type: String },
+  full_name: { type: String, required: true },
   matric_number: { type: String, unique: true, sparse: true },
   phone: { type: String },
   program: { type: String },

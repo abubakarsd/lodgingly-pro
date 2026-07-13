@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { ReactNode } from "react";
-import { Bell, Building2, LayoutDashboard, LogOut, Settings, Wrench, User, FileText, MessageCircle, MessageSquare } from "lucide-react";
+import { Bell, Building2, LayoutDashboard, LogOut, Settings, Wrench, User, FileText, MessageCircle, MessageSquare, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ const adminNav = [
   { to: "/admin", label: "Overview", Icon: LayoutDashboard },
   { to: "/accommodation", label: "Hostels", Icon: Building2 },
   { to: "/clearance", label: "Clearance", Icon: FileText },
-  { to: "/users", label: "Users", Icon: User },
+  { to: "/hall-admins", label: "Hall Admins", Icon: ShieldCheck },
   { to: "/allocations", label: "Allocations", Icon: Building2 },
   { to: "/complaints", label: "Complaints", Icon: MessageCircle },
   { to: "/messages", label: "Messages", Icon: MessageSquare },

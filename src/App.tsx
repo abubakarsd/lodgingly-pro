@@ -10,7 +10,7 @@ import StudentDashboard from "./pages/StudentDashboard";
 import Accommodation from "./pages/Accommodation";
 import AdminDashboard from "./pages/AdminDashboard";
 import Clearance from "./pages/Clearance";
-import Users from "./pages/Users";
+import HallAdmins from "./pages/HallAdmins";
 import Allocations from "./pages/Allocations";
 import Complaints from "./pages/Complaints";
 import Messages from "./pages/Messages";
@@ -42,7 +42,7 @@ const App = () => (
             <Route path="/accommodation" element={<Protected><Accommodation /></Protected>} />
             <Route path="/admin" element={<Protected admin><AdminDashboard /></Protected>} />
             <Route path="/clearance" element={<Protected><Clearance /></Protected>} />
-            <Route path="/users" element={<Protected admin><Users /></Protected>} />
+            <Route path="/hall-admins" element={<Protected admin><HallAdmins /></Protected>} />
             <Route path="/allocations" element={<Protected admin><Allocations /></Protected>} />
             <Route path="/complaints" element={<Protected><Complaints /></Protected>} />
             <Route path="/messages" element={<Protected><Messages /></Protected>} />

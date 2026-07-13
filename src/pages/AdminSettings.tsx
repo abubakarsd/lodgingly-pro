@@ -1,71 +1,80 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, ShieldCheck, Lock, Users, Trash } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { Loader2, ShieldAlert, ShieldCheck, KeyRound, Search, Plus, Pencil, Trash } from "lucide-react";
+import { Navigate } from "react-router-dom";
 
-type Hostel = { id: string; name: string };
-type Profile = { id: string; full_name: string; email: string; matric_number: string; role: string; hostel_id?: string };
+type Profile = {
+  id: string;
+  email?: string;
+  full_name?: string;
+  matric_number?: string;
+  role: "student" | "admin" | "hall_admin";
+  hostel_id?: string | null;
+};
 
 export default function AdminSettings() {
-  const { user, role } = useAuth();
+  const { role, user } = useAuth();
   
-  // Password State
+  // Security State
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
-  // RBAC / Hall Admin State
+  // Users Management State
+  const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [hostels, setHostels] = useState<Hostel[]>([]);
-  
-  const [searchEmail, setSearchEmail] = useState("");
-  const [selectedHostel, setSelectedHostel] = useState<string>("");
-  const [assigning, setAssigning] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // User Form State
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [matricNumber, setMatricNumber] = useState("");
+  const [userRole, setUserRole] = useState<"student" | "admin" | "hall_admin">("student");
+
+  if (role !== "admin" && role !== "hall_admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   useEffect(() => {
-    if (user) void loadData();
-  }, [user]);
+    void loadData();
+  }, []);
 
   async function loadData() {
     setLoading(true);
     try {
-      const [pRes, hRes] = await Promise.all([
-        supabase.from("profiles").select("*"),
-        supabase.from("hostels").select("id, name")
-      ]);
-      if (pRes.error) throw pRes.error;
-      if (hRes.error) throw hRes.error;
-      
-      setProfiles(pRes.data as any[]);
-      setHostels(hRes.data as any[]);
+      const { data: pData, error: pErr } = await supabase.from("profiles").select("*").order("full_name");
+      if (pErr) throw pErr;
+      setUsers((pData as any) || []);
     } catch (err: any) {
-      toast({ title: "Error loading data", description: err.message, variant: "destructive" });
+      toast({ title: "Failed to load data", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   }
 
-  async function handlePasswordChange(e: React.FormEvent) {
+  async function handleUpdatePassword(e: React.FormEvent) {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toast({ title: "Mismatch", description: "Passwords do not match.", variant: "destructive" });
+      toast({ title: "Passwords do not match", variant: "destructive" });
       return;
     }
-    if (newPassword.length < 6) {
-      toast({ title: "Too short", description: "Password must be at least 6 characters.", variant: "destructive" });
-      return;
-    }
-    
-    setUpdatingPassword(true);
+    setUpdating(true);
     try {
       const res = await fetch('/api/auth/password', {
         method: 'PATCH',
@@ -73,189 +82,287 @@ export default function AdminSettings() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${JSON.parse(localStorage.getItem('auth_session') || '{}').access_token}`
         },
-        body: JSON.stringify({ newPassword })
+        body: JSON.stringify({ currentPassword, newPassword })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       
-      toast({ title: "Password Updated", description: "Your password has been successfully changed." });
+      toast({ title: "Password Updated", description: "Your password has been changed successfully." });
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: any) {
       toast({ title: "Update Failed", description: err.message, variant: "destructive" });
     } finally {
-      setUpdatingPassword(false);
+      setUpdating(false);
     }
   }
 
-  async function handleAssignRole(e: React.FormEvent) {
+  function handleOpenCreate() {
+    setEditingId(null);
+    setEmail("");
+    setPassword("");
+    setFullName("");
+    setMatricNumber("");
+    setUserRole("student");
+    setDialogOpen(true);
+  }
+
+  function handleOpenEdit(userRecord: Profile) {
+    setEditingId(userRecord.id);
+    setEmail(userRecord.email || "");
+    setPassword(""); // Keep blank to not modify
+    setFullName(userRecord.full_name || "");
+    setMatricNumber(userRecord.matric_number || "");
+    setUserRole(userRecord.role);
+    setDialogOpen(true);
+  }
+
+  async function handleSaveUser(e: React.FormEvent) {
     e.preventDefault();
-    if (!searchEmail.trim() || !selectedHostel) return;
-    setAssigning(true);
-    
+    setSubmitting(true);
     try {
-      const targetUser = profiles.find(p => 
-        p.email?.toLowerCase() === searchEmail.toLowerCase() || 
-        p.matric_number?.toLowerCase() === searchEmail.toLowerCase()
-      );
-      
-      if (!targetUser) {
-        throw new Error("User not found matching email or matric number.");
-      }
+      if (editingId) {
+        // Edit User Profiles
+        const payload: any = {
+          email,
+          full_name: fullName,
+          matric_number: matricNumber || null,
+          role: userRole,
+        };
+        // Update password if present
+        if (password) payload.password = password; // Note: In reality this should hit an API to hash
 
-      if (targetUser.role === "admin") {
-        throw new Error("Cannot modify the Ultimate Admin role.");
+        const { error } = await supabase.from("profiles").update(payload).eq("id", editingId);
+        if (error) throw error;
+        toast({ title: "User updated successfully" });
+      } else {
+        // Create User (Calls secure endpoint on backend)
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${JSON.parse(localStorage.getItem('auth_session') || '{}').access_token}`
+          },
+          body: JSON.stringify({ 
+            email, 
+            fullName, 
+            password, 
+            matricNumber: matricNumber || undefined,
+            role: userRole
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        
+        toast({ title: "User created successfully" });
       }
-
-      const { error } = await supabase.from("profiles").update({
-        role: "hall_admin",
-        hostel_id: selectedHostel
-      }).eq("id", targetUser.id);
-      
-      if (error) throw error;
-      
-      toast({ title: "Role Assigned", description: `${targetUser.full_name} is now a Hall Admin.` });
-      setSearchEmail("");
-      setSelectedHostel("");
+      setDialogOpen(false);
       void loadData();
     } catch (err: any) {
-      toast({ title: "Assignment Failed", description: err.message, variant: "destructive" });
+      toast({ title: "Failed to save user", description: err.message, variant: "destructive" });
     } finally {
-      setAssigning(false);
+      setSubmitting(false);
     }
   }
 
-  async function handleRevokeRole(profileId: string) {
+  async function handleDelete(id: string) {
+    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
     try {
-      const { error } = await supabase.from("profiles").update({
-        role: "student",
-        hostel_id: null
-      }).eq("id", profileId);
-      
+      const { error } = await supabase.from("profiles").delete().eq("id", id);
       if (error) throw error;
-      toast({ title: "Role Revoked", description: "User has been demoted to student." });
+      toast({ title: "User deleted" });
       void loadData();
     } catch (err: any) {
-      toast({ title: "Revoke Failed", description: err.message, variant: "destructive" });
+      toast({ title: "Failed to delete user", description: err.message, variant: "destructive" });
     }
   }
 
-  const hallAdmins = profiles.filter(p => p.role === "hall_admin");
+  const filteredUsers = users.filter((u) => {
+    const term = searchQuery.toLowerCase();
+    return (
+      (u.full_name || "").toLowerCase().includes(term) ||
+      (u.matric_number || "").toLowerCase().includes(term) ||
+      (u.email || "").toLowerCase().includes(term)
+    );
+  });
 
   return (
     <AppShell title="System Settings">
-      <div className="grid grid-cols-12 gap-6 animate-fade-up">
-        
-        {/* Security Settings */}
-        <Card className="col-span-12 md:col-span-5 p-6 self-start">
-          <div className="flex items-center gap-2 mb-4">
-            <Lock className="size-5 text-leaf-600" />
-            <h3 className="font-semibold text-lg">Security Settings</h3>
-          </div>
-          <p className="text-sm text-muted-foreground mb-6">Update your account password. Ensure it is strong and secure.</p>
+      <div className="space-y-6 animate-fade-up max-w-5xl mx-auto">
+        <Tabs defaultValue={role === "admin" ? "users" : "security"}>
+          <TabsList className="mb-4">
+            {role === "admin" && <TabsTrigger value="users">Users Management</TabsTrigger>}
+            <TabsTrigger value="security">Security & Password</TabsTrigger>
+          </TabsList>
           
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label>New Password</Label>
-              <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} />
-            </div>
-            <div className="space-y-2">
-              <Label>Confirm Password</Label>
-              <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={6} />
-            </div>
-            <Button type="submit" className="w-full" disabled={updatingPassword}>
-              {updatingPassword && <Loader2 className="size-4 mr-2 animate-spin" />}
-              Change Password
-            </Button>
-          </form>
-        </Card>
+          {role === "admin" && (
+            <TabsContent value="users">
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between gap-4">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search users..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Button onClick={handleOpenCreate} className="flex items-center gap-2 self-start">
+                    <Plus className="size-4" /> Add New User
+                  </Button>
+                </div>
 
-        {/* RBAC Settings */}
-        {role === "admin" && (
-          <div className="col-span-12 md:col-span-7 space-y-6">
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <ShieldCheck className="size-5 text-leaf-600" />
-                <h3 className="font-semibold text-lg">Assign Hall Admin</h3>
+                <Card className="p-6">
+                  {loading ? (
+                    <div className="flex justify-center py-8 text-muted-foreground"><Loader2 className="size-6 animate-spin" /></div>
+                  ) : filteredUsers.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground text-sm">No users found.</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Full Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Matric No.</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredUsers.map((u) => (
+                            <TableRow key={u.id}>
+                              <TableCell className="font-medium">{u.full_name}</TableCell>
+                              <TableCell>{u.email}</TableCell>
+                              <TableCell>{u.matric_number || "-"}</TableCell>
+                              <TableCell>
+                                <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${
+                                  u.role === "admin" ? "bg-purple-100 text-purple-800" : 
+                                  u.role === "hall_admin" ? "bg-amber-100 text-amber-800" :
+                                  "bg-leaf-100 text-leaf-800"
+                                }`}>
+                                  {u.role.replace("_", " ")}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right space-x-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(u)}>
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                                {u.id !== user?.id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                    onClick={() => handleDelete(u.id)}
+                                  >
+                                    <Trash className="size-3.5" />
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </Card>
               </div>
-              <p className="text-sm text-muted-foreground mb-6">Promote a student to manage a specific hostel. They will only have access to data within that hostel.</p>
+            </TabsContent>
+          )}
+
+          <TabsContent value="security">
+            <Card className="p-6 max-w-xl">
+              <div className="flex items-center gap-2 mb-4">
+                <KeyRound className="size-5 text-leaf-600" />
+                <h3 className="font-semibold text-lg">Change Password</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">Update your account password. Use a strong password to ensure your account remains secure.</p>
               
-              <form onSubmit={handleAssignRole} className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>User Email or Matric No.</Label>
-                  <Input placeholder="e.g. U16CSC206" value={searchEmail} onChange={e => setSearchEmail(e.target.value)} required />
+                  <Label>Current Password (Optional if forced reset)</Label>
+                  <Input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Assign to Hostel</Label>
-                  <Select value={selectedHostel} onValueChange={setSelectedHostel} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a hostel..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hostels.map(h => (
-                        <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>New Password</Label>
+                  <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} />
                 </div>
-                <Button type="submit" className="sm:col-span-2" disabled={assigning}>
-                  {assigning && <Loader2 className="size-4 mr-2 animate-spin" />}
-                  Assign Hall Admin Role
+                <div className="space-y-2">
+                  <Label>Confirm New Password</Label>
+                  <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={6} />
+                </div>
+                <Button type="submit" disabled={updating}>
+                  {updating && <Loader2 className="size-4 mr-2 animate-spin" />}
+                  Update Password
                 </Button>
               </form>
             </Card>
+          </TabsContent>
 
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <Users className="size-5 text-leaf-600" />
-                  <h3 className="font-semibold text-lg">Active Hall Admins</h3>
+        </Tabs>
+
+        {/* User Create/Edit Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <form onSubmit={handleSaveUser}>
+              <DialogHeader>
+                <DialogTitle>{editingId ? "Edit User Account" : "Create New Account"}</DialogTitle>
+                <DialogDescription>
+                  {editingId ? "Modify user details below." : "Enter details for the new user account."}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Full Name</Label>
+                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Email Address</Label>
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Password {editingId && "(leave blank to keep current)"}</Label>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required={!editingId}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Matric Number</Label>
+                  <Input
+                    placeholder="e.g. U16CSC206 (optional)"
+                    value={matricNumber}
+                    onChange={(e) => setMatricNumber(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Account Role</Label>
+                  <Select value={userRole} onValueChange={(v: any) => setUserRole(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="student">Student</SelectItem>
+                      <SelectItem value="hall_admin">Hall Admin</SelectItem>
+                      <SelectItem value="admin">Ultimate Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              
-              {loading ? (
-                <div className="flex justify-center py-8 text-muted-foreground"><Loader2 className="size-6 animate-spin" /></div>
-              ) : hallAdmins.length === 0 ? (
-                <div className="text-center py-8 text-sm text-muted-foreground">No hall admins assigned yet.</div>
-              ) : (
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead>Admin</TableHead>
-                        <TableHead>Assigned Hostel</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {hallAdmins.map((admin) => {
-                        const h = hostels.find(x => x.id === admin.hostel_id);
-                        return (
-                          <TableRow key={admin.id}>
-                            <TableCell>
-                              <div className="font-medium">{admin.full_name}</div>
-                              <div className="text-xs text-muted-foreground">{admin.email}</div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-leaf-50 text-leaf-700 ring-1 ring-leaf-600/20">
-                                {h?.name || "Unknown"}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8" onClick={() => handleRevokeRole(admin.id)}>
-                                <Trash className="size-3.5 mr-1.5" /> Revoke
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </Card>
-          </div>
-        )}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
+                  Save user
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, API_URL } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -75,7 +75,7 @@ export default function AdminSettings() {
     }
     setUpdating(true);
     try {
-      const res = await fetch('/api/auth/password', {
+      const res = await fetch(`${API_URL}/auth/password`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export default function AdminSettings() {
         toast({ title: "User updated successfully" });
       } else {
         // Create User (Calls secure endpoint on backend)
-        const res = await fetch('/api/admin/users', {
+        const res = await fetch(`${API_URL}/admin/users`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

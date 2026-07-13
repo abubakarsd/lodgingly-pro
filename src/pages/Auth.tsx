@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
 import bgImage from "@/assets/bg-image.jpeg";
 
 export default function Auth() {
@@ -117,7 +118,10 @@ export default function Auth() {
                       <Label>Password</Label>
                       <Input type="password" required value={studentPassword} onChange={(e) => setStudentPassword(e.target.value)} />
                     </div>
-                    <Button disabled={busy} type="submit" className="w-full">Sign in as Student</Button>
+                    <Button disabled={busy} type="submit" className="w-full">
+                      {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Sign in as Student
+                    </Button>
                     <p className="text-center text-sm text-muted-foreground mt-4">
                       New student? <button type="button" onClick={() => setIsStudentSignup(true)} className="text-leaf-600 hover:underline">Create an account</button>
                     </p>
@@ -140,7 +144,10 @@ export default function Auth() {
                       <Label>Password</Label>
                       <Input type="password" required minLength={6} value={studentPassword} onChange={(e) => setStudentPassword(e.target.value)} />
                     </div>
-                    <Button disabled={busy} type="submit" className="w-full">Create Student Account</Button>
+                    <Button disabled={busy} type="submit" className="w-full">
+                      {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Create Student Account
+                    </Button>
                     <p className="text-center text-sm text-muted-foreground mt-4">
                       Already have an account? <button type="button" onClick={() => setIsStudentSignup(false)} className="text-leaf-600 hover:underline">Sign in</button>
                     </p>
@@ -158,7 +165,10 @@ export default function Auth() {
                     <Label>Password</Label>
                     <Input type="password" required value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
                   </div>
-                  <Button disabled={busy} type="submit" className="w-full">Sign in as Admin</Button>
+                  <Button disabled={busy} type="submit" className="w-full">
+                    {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sign in as Admin
+                  </Button>
                 </form>
               </TabsContent>
             </Tabs>

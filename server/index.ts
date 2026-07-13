@@ -518,6 +518,10 @@ app.patch('/api/db/:table', authenticateToken, async (req: AuthRequest | any, re
       const idFilter = filters.find((f: any) => f.field === 'id' && f.op === 'eq');
       if (idFilter) queryId = idFilter.value;
 
+      if (data.password) {
+        data.password = await bcrypt.hash(data.password, 10);
+      }
+
       const profile = await User.findByIdAndUpdate(queryId, data, { new: true });
       if (!profile) return res.status(404).json({ message: 'Profile not found' });
       return res.json(profile);

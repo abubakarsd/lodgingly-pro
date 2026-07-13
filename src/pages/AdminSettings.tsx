@@ -38,6 +38,7 @@ export default function AdminSettings() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [userListTab, setUserListTab] = useState<"students" | "admins">("students");
 
   // User Form State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -190,6 +191,11 @@ export default function AdminSettings() {
   }
 
   const filteredUsers = users.filter((u) => {
+    // apply role filter
+    if (userListTab === "students" && u.role !== "student") return false;
+    if (userListTab === "admins" && u.role === "student") return false;
+
+    // apply search filter
     const term = searchQuery.toLowerCase();
     return (
       (u.full_name || "").toLowerCase().includes(term) ||
@@ -210,19 +216,29 @@ export default function AdminSettings() {
           {role === "admin" && (
             <TabsContent value="users">
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row justify-between gap-4">
+                <div className="flex flex-col sm:flex-row justify-between gap-4 border-b pb-4">
+                  <Tabs value={userListTab} onValueChange={(v: any) => setUserListTab(v)}>
+                    <TabsList>
+                      <TabsTrigger value="students">Students</TabsTrigger>
+                      <TabsTrigger value="admins">Admins & Staff</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  
+                  <Button onClick={handleOpenCreate} className="flex items-center gap-2 self-start">
+                    <Plus className="size-4" /> Create Admin Account
+                  </Button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-between gap-4 pt-2">
                   <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search users..."
+                      placeholder={userListTab === "students" ? "Search students by name, email, or matric no..." : "Search staff by name or email..."}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9"
                     />
                   </div>
-                  <Button onClick={handleOpenCreate} className="flex items-center gap-2 self-start">
-                    <Plus className="size-4" /> Add New User
-                  </Button>
                 </div>
 
                 <Card className="p-6">

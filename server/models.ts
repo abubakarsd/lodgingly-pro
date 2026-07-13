@@ -123,11 +123,23 @@ const NotificationSchema = new Schema({
 }, { ...schemaOptions, timestamps: { createdAt: 'created_at', updatedAt: false } });
 export const Notification = (mongoose.models.Notification || mongoose.model('Notification', NotificationSchema)) as any;
 
-// 9. ClearanceItem Model
+// 9. ClearanceRequirement Model
+const ClearanceRequirementSchema = new Schema({
+  _id: { type: String, default: () => randomUUID() },
+  name: { type: String, required: true },
+  description: { type: String },
+  requires_file: { type: Boolean, default: false },
+  file_type: { type: String, enum: ['image', 'pdf', 'any'], default: 'any' }
+}, { ...schemaOptions, timestamps: { createdAt: 'created_at', updatedAt: false } });
+export const ClearanceRequirement = (mongoose.models.ClearanceRequirement || mongoose.model('ClearanceRequirement', ClearanceRequirementSchema)) as any;
+
+// 10. ClearanceItem Model
 const ClearanceItemSchema = new Schema({
   _id: { type: String, default: () => randomUUID() },
   student_id: { type: String, ref: 'User', required: true },
-  item: { type: String, required: true },
+  requirement_id: { type: String, ref: 'ClearanceRequirement' },
+  item: { type: String, required: true }, // Keeping for backwards compatibility
+  attachment_url: { type: String }, // Used to store Base64 string for file uploads
   status: { type: String, enum: ['pending', 'verified', 'rejected'], default: 'pending' },
   verified_by: { type: String, ref: 'User' }
 }, schemaOptions);

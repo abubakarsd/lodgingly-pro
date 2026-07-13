@@ -27,7 +27,9 @@ export default function Auth() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) nav(role === "admin" ? "/admin" : "/dashboard", { replace: true });
+    if (!loading && user && role) {
+      nav(role === "admin" ? "/admin" : "/dashboard", { replace: true });
+    }
   }, [user, role, loading, nav]);
 
   async function studentSignIn(e: React.FormEvent) {

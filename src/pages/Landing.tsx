@@ -11,16 +11,39 @@ import bgImage from "@/assets/bg-image.jpeg";
 
 export default function Landing() {
   const [hostels, setHostels] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    occupancyPct: 0,
+    pendingTickets: 0,
+    recentComplaints: [] as any[]
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const { data, error } = await supabase.from("hostels").select("*");
-        if (error) throw error;
-        setHostels(data || []);
+        const [hostelsRes, roomsRes, allocRes, openTicketsRes, complaintsRes] = await Promise.all([
+          supabase.from("hostels").select("*"),
+          supabase.from("rooms").select("capacity"),
+          supabase.from("allocations").select("id").eq("status", "active"),
+          // @ts-ignore - Supabase select allows 2 arguments for count queries
+          supabase.from("complaints").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"]),
+          supabase.from("complaints").select("id, title, priority, status, created_at").order("created_at", { ascending: false }).limit(3)
+        ]);
+
+        if (hostelsRes.error) throw hostelsRes.error;
+        setHostels(hostelsRes.data || []);
+
+        const totalBeds = (roomsRes.data ?? []).reduce((s, r: any) => s + (r.capacity || 0), 0);
+        const occupied = (allocRes.data ?? []).length;
+        const occupancyPct = totalBeds ? Math.round((occupied / totalBeds) * 1000) / 10 : 0;
+        
+        setStats({
+          occupancyPct,
+          pendingTickets: openTicketsRes.count ?? 0,
+          recentComplaints: complaintsRes.data ?? []
+        });
       } catch (err) {
-        console.error("Error loading hostels:", err);
+        console.error("Error loading data:", err);
       } finally {
         setLoading(false);
       }
@@ -209,32 +232,43 @@ export default function Landing() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-zinc-800/50 rounded-xl border border-white/5">
                 <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Total Occupancy</p>
-                <p className="text-2xl font-semibold mt-1">92.4%</p>
+                <p className="text-2xl font-semibold mt-1">{stats.occupancyPct}%</p>
                 <div className="mt-2 h-1 bg-zinc-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-leaf-500 w-[92%]"></div>
+                  <div className="h-full bg-leaf-500 transition-all" style={{ width: `${stats.occupancyPct}%` }}></div>
                 </div>
               </div>
               <div className="p-4 bg-zinc-800/50 rounded-xl border border-white/5">
                 <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Pending Tickets</p>
-                <p className="text-2xl font-semibold mt-1">18</p>
+                <p className="text-2xl font-semibold mt-1">{stats.pendingTickets}</p>
                 <p className="text-[10px] text-leaf-500 mt-2">-4 from yesterday</p>
               </div>
             </div>
             <div className="mt-6 p-4 bg-zinc-800/50 rounded-xl border border-white/5">
               <p className="text-xs font-semibold mb-4">Recent Complaints</p>
               <div className="space-y-3 text-xs">
-                <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <span className="text-zinc-400">Leak in C402</span>
-                  <span className="bg-leaf-900/40 text-leaf-500 px-2 py-0.5 rounded text-[10px] font-medium">High</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <span className="text-zinc-400">Wi-Fi Outage — Hall B</span>
-                  <span className="bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded text-[10px] font-medium">Resolved</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-zinc-400">Furniture Request</span>
-                  <span className="bg-amber-900/40 text-amber-400 px-2 py-0.5 rounded text-[10px] font-medium">Pending</span>
-                </div>
+                {stats.recentComplaints.length === 0 ? (
+                  <p className="text-zinc-500 py-2">No recent complaints</p>
+                ) : (
+                  stats.recentComplaints.map(c => {
+                    let label = "Pending";
+                    let classes = "bg-amber-900/40 text-amber-400";
+                    if (c.status === "resolved" || c.status === "closed") {
+                      label = "Resolved";
+                      classes = "bg-zinc-800 text-zinc-400";
+                    } else if (c.priority === "high") {
+                      label = "High";
+                      classes = "bg-leaf-900/40 text-leaf-500";
+                    }
+                    return (
+                      <div key={c.id} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                        <span className="text-zinc-400 truncate pr-2">{c.title}</span>
+                        <span className={`${classes} px-2 py-0.5 rounded text-[10px] font-medium shrink-0`}>
+                          {label}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

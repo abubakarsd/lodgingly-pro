@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { resolve } from 'path';
-import { User, Hostel, Block, Room, Allocation, Complaint, Message, Notification, ClearanceItem } from './models.js';
+import { User, Hostel, Block, Room, Allocation, Complaint, Message, Notification, ClearanceItem, ClearanceRequirement } from './models.js';
 // import { seedDatabase } from './seed';
 
 dotenv.config({ path: '.env' });
@@ -119,6 +119,7 @@ const getModel = (tableName: string): any => {
     case 'messages': return Message;
     case 'notifications': return Notification;
     case 'clearance_items': return ClearanceItem;
+    case 'clearance_requirements': return ClearanceRequirement;
     default: return null;
   }
 };
@@ -326,7 +327,10 @@ app.get('/api/db/:table', (req: any, res: Response, next: NextFunction) => {
     }
 
     if (table === 'clearance_items') {
-      query = query.populate({ path: 'student_id', model: 'User' }).populate({ path: 'verified_by', model: 'User' });
+      query = query
+        .populate({ path: 'student_id', model: 'User' })
+        .populate({ path: 'verified_by', model: 'User' })
+        .populate({ path: 'requirement_id', model: 'ClearanceRequirement' });
     }
 
     if (table === 'complaints') {

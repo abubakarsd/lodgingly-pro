@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Loader2, CheckCircle2, MessageSquare, Clock } from "lucide-react";
+import { AlertTriangle, Loader2, CheckCircle2, Clock } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 type ComplaintRecord = {
   id: string;
@@ -18,6 +19,7 @@ type ComplaintRecord = {
     id: string;
     full_name: string;
     matric_number: string;
+    email: string;
   } | string;
   category: string;
   title: string;
@@ -42,6 +44,9 @@ export default function Complaints() {
   const [category, setCategory] = useState("Maintenance");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [description, setDescription] = useState("");
+
+  // Admin view item state
+  const [selectedItem, setSelectedItem] = useState<ComplaintRecord | null>(null);
 
   useEffect(() => {
     if (user) void load();
@@ -94,6 +99,11 @@ export default function Complaints() {
       const { error } = await supabase.from("complaints").update({ status: newStatus }).eq("id", id);
       if (error) throw error;
       toast({ title: "Status updated", description: `Complaint marked as ${newStatus.replace("_", " ")}.` });
+      
+      if (selectedItem && selectedItem.id === id) {
+        setSelectedItem({ ...selectedItem, status: newStatus as any });
+      }
+
       void load();
     } catch (err: any) {
       toast({ title: "Failed to update status", description: err.message, variant: "destructive" });
@@ -244,7 +254,7 @@ export default function Complaints() {
             <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
               <div>
                 <h3 className="font-semibold text-lg">Complaints Board</h3>
-                <p className="text-sm text-muted-foreground mt-1">Review and manage student maintenance and code violations tickets.</p>
+                <p className="text-sm text-muted-foreground mt-1">Click on any ticket to review details and update its status.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -259,7 +269,7 @@ export default function Complaints() {
                     <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={priorityFilter} onValueChange={setStatusFilter}>
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                   <SelectTrigger className="w-[140px] h-9">
                     <SelectValue placeholder="Priority" />
                   </SelectTrigger>
@@ -278,60 +288,129 @@ export default function Complaints() {
             ) : filteredComplaints.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground text-sm">No complaints match filters.</div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Complaint / Category</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Filed Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredComplaints.map((c) => {
-                    const student = typeof c.student_id === "object" ? c.student_id : null;
-                    return (
-                      <TableRow key={c.id}>
-                        <TableCell>
-                          <div className="font-medium">{student?.full_name ?? "Unknown"}</div>
-                          <div className="text-xs text-muted-foreground">{student?.matric_number ?? "N/A"}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-semibold">{c.title}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">{c.category} • {c.description}</div>
-                        </TableCell>
-                        <TableCell>{getPriorityBadge(c.priority)}</TableCell>
-                        <TableCell>{getStatusBadge(c.status)}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Select
-                            value={c.status}
-                            onValueChange={(val) => handleStatusChange(c.id, val)}
-                          >
-                            <SelectTrigger className="w-[120px] h-8 ml-auto">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="open">Open</SelectItem>
-                              <SelectItem value="in_progress">In Progress</SelectItem>
-                              <SelectItem value="resolved">Resolved</SelectItem>
-                              <SelectItem value="closed">Closed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Issue</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Filed Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredComplaints.map((c) => {
+                      const student = typeof c.student_id === "object" ? c.student_id : null;
+                      return (
+                        <TableRow 
+                          key={c.id} 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setSelectedItem(c)}
+                        >
+                          <TableCell>
+                            <div className="font-medium">{student?.full_name ?? "Unknown"}</div>
+                            <div className="text-xs text-muted-foreground">{student?.matric_number ?? "N/A"}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-semibold">{c.title}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{c.category}</div>
+                          </TableCell>
+                          <TableCell>{getPriorityBadge(c.priority)}</TableCell>
+                          <TableCell>{getStatusBadge(c.status)}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </Card>
         )}
       </div>
+
+      {/* Admin Review Sheet */}
+      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+        <SheetContent className="sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Ticket Review</SheetTitle>
+            <SheetDescription>Review complaint details and update status.</SheetDescription>
+          </SheetHeader>
+          
+          {selectedItem && (
+            <div className="mt-6 space-y-6">
+              {/* Manage Status */}
+              <div className="p-4 bg-muted border rounded-lg">
+                <Label className="text-sm font-semibold mb-2 block">Update Status</Label>
+                <Select
+                  value={selectedItem.status}
+                  onValueChange={(val) => handleStatusChange(selectedItem.id, val)}
+                >
+                  <SelectTrigger className="w-full bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Badges */}
+              <div className="flex gap-2">
+                {getPriorityBadge(selectedItem.priority)}
+                {getStatusBadge(selectedItem.status)}
+              </div>
+
+              {/* Student Details */}
+              <div>
+                <h4 className="font-semibold text-sm mb-2 text-muted-foreground uppercase tracking-wide">Student Info</h4>
+                <div className="grid grid-cols-2 gap-y-2 text-sm border-l-2 border-primary/20 pl-3">
+                  <div className="text-muted-foreground">Name</div>
+                  <div className="font-medium">{typeof selectedItem.student_id === "object" ? selectedItem.student_id?.full_name : "-"}</div>
+                  <div className="text-muted-foreground">Matric No.</div>
+                  <div className="font-medium">{typeof selectedItem.student_id === "object" ? selectedItem.student_id?.matric_number : "-"}</div>
+                  <div className="text-muted-foreground">Email</div>
+                  <div className="font-medium">{typeof selectedItem.student_id === "object" ? selectedItem.student_id?.email : "-"}</div>
+                </div>
+              </div>
+
+              {/* Complaint Details */}
+              <div>
+                <h4 className="font-semibold text-sm mb-2 text-muted-foreground uppercase tracking-wide">Issue Details</h4>
+                <div className="space-y-3 border-l-2 border-primary/20 pl-3 text-sm">
+                  <div>
+                    <div className="text-muted-foreground text-xs">Title</div>
+                    <div className="font-medium mt-0.5">{selectedItem.title}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">Category</div>
+                    <div className="font-medium mt-0.5">{selectedItem.category}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">Description</div>
+                    <div className="mt-1 p-3 bg-muted rounded-md text-sm whitespace-pre-wrap">
+                      {selectedItem.description}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs">Date Filed</div>
+                    <div className="mt-0.5">
+                      {selectedItem.created_at ? new Date(selectedItem.created_at).toLocaleString() : "-"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </AppShell>
   );
 }

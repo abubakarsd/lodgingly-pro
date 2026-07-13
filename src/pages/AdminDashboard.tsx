@@ -24,6 +24,7 @@ export default function AdminDashboard() {
 
     const totalBeds = (rooms.data ?? []).reduce((s, r: any) => s + r.capacity, 0);
     const occupied = (alloc.data ?? []).length;
+    // @ts-ignore - Supabase select allows 2 arguments for count queries
     const openTickets = (await supabase.from("complaints").select("id", { count: "exact", head: true }).in("status", ["open", "in_progress"])).count ?? 0;
 
     setStats([

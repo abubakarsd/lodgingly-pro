@@ -25,7 +25,7 @@ const adminNav = [
 ];
 
 const hallAdminNav = [
-  { to: "/admin", label: "Overview", Icon: LayoutDashboard },
+  { to: "/hall-dashboard", label: "Overview", Icon: LayoutDashboard },
   { to: "/accommodation", label: "My Hostel", Icon: Building2 },
   { to: "/clearance", label: "Clearance", Icon: FileText },
   { to: "/allocations", label: "Allocations", Icon: Building2 },

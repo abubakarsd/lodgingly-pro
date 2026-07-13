@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import StudentDashboard from "./pages/StudentDashboard";
 import Accommodation from "./pages/Accommodation";
 import AdminDashboard from "./pages/AdminDashboard";
+import HallAdminDashboard from "./pages/HallAdminDashboard";
 import Clearance from "./pages/Clearance";
 import HallAdmins from "./pages/HallAdmins";
 import Allocations from "./pages/Allocations";
@@ -24,7 +25,7 @@ function Protected({ children, admin = false }: { children: JSX.Element; admin?:
   const { user, role, loading } = useAuth();
   if (loading) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
   if (!user) return <Navigate to="/auth" replace />;
-  if (admin && role !== "admin") return <Navigate to="/dashboard" replace />;
+  if (admin && role !== "admin" && role !== "hall_admin") return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/dashboard" element={<Protected><StudentDashboard /></Protected>} />
             <Route path="/accommodation" element={<Protected><Accommodation /></Protected>} />
             <Route path="/admin" element={<Protected admin><AdminDashboard /></Protected>} />
+            <Route path="/hall-dashboard" element={<Protected admin><HallAdminDashboard /></Protected>} />
             <Route path="/clearance" element={<Protected><Clearance /></Protected>} />
             <Route path="/hall-admins" element={<Protected admin><HallAdmins /></Protected>} />
             <Route path="/allocations" element={<Protected admin><Allocations /></Protected>} />

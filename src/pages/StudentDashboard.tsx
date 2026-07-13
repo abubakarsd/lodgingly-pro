@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
 import { ArrowRight, Bed, MessageSquare, Plus, Wrench } from "lucide-react";
 
@@ -192,14 +193,14 @@ export default function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Roommates Directory Dialog */}
-      <Dialog open={roommatesDialogOpen} onOpenChange={setRoommatesDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Roommates Directory</DialogTitle>
-            <p className="text-xs text-muted-foreground">List of active peers assigned to your room.</p>
-          </DialogHeader>
-          <div className="py-4">
+      {/* Roommates Directory Sheet */}
+      <Sheet open={roommatesDialogOpen} onOpenChange={setRoommatesDialogOpen}>
+        <SheetContent side="right" className="sm:max-w-[425px] overflow-y-auto w-full">
+          <SheetHeader>
+            <SheetTitle>Roommates Directory</SheetTitle>
+            <SheetDescription>List of active peers assigned to your room.</SheetDescription>
+          </SheetHeader>
+          <div className="py-6 mt-4">
             {loadingRoommates ? (
               <div className="flex justify-center py-6">
                 <div className="w-6 h-6 border-2 border-t-leaf-600 border-muted rounded-full animate-spin" />
@@ -207,24 +208,27 @@ export default function StudentDashboard() {
             ) : roommates.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground py-6">No roommates allocated to this room yet.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {roommates.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border bg-surface/50">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-semibold text-zinc-800">{m.name}</p>
+                  <div key={m.id} className="flex flex-col p-4 rounded-xl border bg-surface/50 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-leaf-500" />
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="text-sm font-semibold text-zinc-900">{m.name}</p>
+                      <span className="text-[10px] font-bold text-leaf-700 bg-leaf-50 px-2 py-0.5 rounded ring-1 ring-leaf-100 uppercase">
+                        Bed {m.bed_label}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">{m.matric !== "N/A" ? `Reg: ${m.matric}` : `Email: ${m.email}`}</p>
                       <p className="text-xs text-leaf-700 font-medium">{m.program}</p>
                     </div>
-                    <span className="text-[10px] font-bold text-leaf-700 bg-leaf-50 px-2 py-0.5 rounded ring-1 ring-leaf-100 uppercase">
-                      Bed {m.bed_label}
-                    </span>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </AppShell>
   );
 }

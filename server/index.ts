@@ -557,6 +557,24 @@ app.delete('/api/db/:table', authenticateToken, async (req: AuthRequest | any, r
   try {
     const { table } = req.params;
 
+    // Custom profile delete logic
+    if (table === 'profiles') {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden: Only Ultimate Admin can delete users' });
+      }
+      const filters = req.query.filters ? JSON.parse(req.query.filters as string) : [];
+      const idFilter = filters.find((f: any) => f.field === 'id' && f.op === 'eq');
+      if (!idFilter) {
+        return res.status(400).json({ message: 'User ID is required for deletion' });
+      }
+
+      const doc = await User.findByIdAndDelete(idFilter.value);
+      if (!doc) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      return res.json(doc);
+    }
+
     const Model = getModel(table);
     if (!Model) {
       return res.status(404).json({ message: `Table ${table} not supported` });

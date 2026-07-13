@@ -301,14 +301,24 @@ app.get('/api/db/:table', (req: any, res: Response, next: NextFunction) => {
     // Custom logic for profiles table (queries User model)
     if (table === 'profiles') {
       const filters = req.query.filters ? JSON.parse(req.query.filters as string) : [];
-      let queryId = req.user?.id;
       
       const idFilter = filters.find((f: any) => f.field === 'id' && f.op === 'eq');
-      if (idFilter) queryId = idFilter.value;
+      const roleFilter = filters.find((f: any) => f.field === 'role' && f.op === 'eq');
 
-      const profile = await User.findById(queryId);
-      if (!profile) return res.status(404).json({ message: 'Profile not found' });
-      return res.json([profile]);
+      if (idFilter) {
+        const profile = await User.findById(idFilter.value);
+        if (!profile) return res.status(404).json({ message: 'Profile not found' });
+        return res.json([profile]);
+      } else if (req.user?.role === 'admin' || req.user?.role === 'hall_admin') {
+        const queryOpts: any = {};
+        if (roleFilter) queryOpts.role = roleFilter.value;
+        const profiles = await User.find(queryOpts).sort({ full_name: 1 });
+        return res.json(profiles);
+      } else {
+        const profile = await User.findById(req.user?.id);
+        if (!profile) return res.status(404).json({ message: 'Profile not found' });
+        return res.json([profile]);
+      }
     }
 
     // Custom logic for user_roles table (queries User model)

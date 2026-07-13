@@ -30,7 +30,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (!loading && user && role) {
-      nav(role === "admin" ? "/admin" : "/dashboard", { replace: true });
+      nav(role === "admin" ? "/admin" : role === "hall_admin" ? "/hall-dashboard" : "/dashboard", { replace: true });
     }
   }, [user, role, loading, nav]);
 

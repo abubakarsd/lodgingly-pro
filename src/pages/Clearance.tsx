@@ -285,14 +285,18 @@ export default function Clearance() {
               <form onSubmit={handleSubmitRequest} className="space-y-4">
                 <div className="space-y-2">
                   <Label>Clearance Requirement</Label>
-                  <Select value={selectedReqId} onValueChange={setSelectedReqId} required>
+                  <Select value={selectedReqId} onValueChange={setSelectedReqId} required disabled={requirements.length === 0}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a requirement..." />
+                      <SelectValue placeholder={requirements.length > 0 ? "Select a requirement..." : "No active requirements found"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {requirements.map(r => (
-                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                      ))}
+                      {requirements.length > 0 ? (
+                        requirements.map(r => (
+                          <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No requirements created by Admin yet.</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

@@ -50,18 +50,21 @@ export default function Complaints() {
   const [selectedItem, setSelectedItem] = useState<ComplaintRecord | null>(null);
 
   useEffect(() => {
-    if (user && role !== "hall_admin") void load();
+    if (user && role !== "admin") void load();
   }, [user, role]);
 
-  if (role === "hall_admin") {
-    return <Navigate to="/admin" replace />;
+  if (role === "admin") {
+    return <Navigate to="/dashboard" replace />;
   }
 
   async function load() {
     setLoading(true);
     try {
       let query = supabase.from("complaints").select("*").order("created_at", { ascending: false });
-      if (role !== "admin") {
+      if (role === "hall_admin") {
+        const myHostelId = user?.user_metadata?.hostel_id || (user as any)?.hostel_id;
+        query = query.eq("hostel_id", myHostelId);
+      } else {
         query = query.eq("student_id", user?.id);
       }
       const { data, error } = await query;
@@ -79,6 +82,16 @@ export default function Complaints() {
     if (!title.trim() || !description.trim()) return;
     setSubmitting(true);
     try {
+      // Fetch active allocation to attach hostel_id
+      const { data: alloc } = await supabase
+        .from("allocations")
+        .select("rooms")
+        .eq("student_id", user?.id)
+        .eq("status", "active")
+        .maybeSingle();
+      
+      const h_id = (alloc as any)?.rooms?.blocks?.hostels?.id || null;
+
       const { error } = await supabase.from("complaints").insert({
         student_id: user?.id,
         category,
@@ -86,6 +99,7 @@ export default function Complaints() {
         description: description.trim(),
         priority,
         status: "open",
+        hostel_id: h_id,
       });
       if (error) throw error;
       toast({ title: "Complaint filed", description: "Your complaint has been submitted successfully." });
@@ -164,7 +178,7 @@ export default function Complaints() {
   return (
     <AppShell title="Complaints & Maintenance">
       <div className="space-y-6 animate-fade-up">
-        {role !== "admin" ? (
+        {role === "student" ? (
           <div className="grid grid-cols-12 gap-6">
             {/* Student left: File new complaint */}
             <Card className="col-span-12 md:col-span-4 p-6 self-start">

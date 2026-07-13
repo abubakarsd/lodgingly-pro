@@ -15,12 +15,10 @@ const studentNav = [
 
 const adminNav = [
   { to: "/admin", label: "Overview", Icon: LayoutDashboard },
-  { to: "/accommodation", label: "Hostels", Icon: Building2 },
-  { to: "/clearance", label: "Clearance", Icon: FileText },
   { to: "/hall-admins", label: "Hall Admins", Icon: ShieldCheck },
   { to: "/allocations", label: "Allocations", Icon: Building2 },
-  { to: "/complaints", label: "Complaints", Icon: MessageCircle },
-  { to: "/messages", label: "Messages", Icon: MessageSquare },
+  { to: "/clearance", label: "Clearance", Icon: FileText },
+  { to: "/notifications", label: "Broadcasts", Icon: Bell },
   { to: "/settings", label: "Settings", Icon: Settings },
 ];
 
@@ -29,6 +27,8 @@ const hallAdminNav = [
   { to: "/accommodation", label: "My Hostel", Icon: Building2 },
   { to: "/clearance", label: "Clearance", Icon: FileText },
   { to: "/allocations", label: "Allocations", Icon: Building2 },
+  { to: "/complaints", label: "Complaints", Icon: Wrench },
+  { to: "/messages", label: "Messages", Icon: MessageSquare },
   { to: "/settings", label: "Settings", Icon: Settings },
 ];
 

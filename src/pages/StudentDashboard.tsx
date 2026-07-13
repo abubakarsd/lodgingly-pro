@@ -245,8 +245,19 @@ function NewComplaintDialog({ onDone }: { onDone: () => void }) {
     e.preventDefault();
     if (!user) return;
     setBusy(true);
+    
+    // Fetch active allocation to attach hostel_id
+    const { data: alloc } = await supabase
+      .from("allocations")
+      .select("rooms")
+      .eq("student_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+      
+    const h_id = (alloc as any)?.rooms?.blocks?.hostels?.id || null;
+
     const { error } = await supabase.from("complaints").insert({
-      student_id: user.id, title, description, category, priority: priority as any,
+      student_id: user.id, title, description, category, priority: priority as any, hostel_id: h_id
     });
     setBusy(false);
     if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }

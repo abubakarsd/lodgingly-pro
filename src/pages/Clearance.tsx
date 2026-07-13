@@ -86,9 +86,14 @@ export default function Clearance() {
       setRequirements((reqRes.data as any) ?? []);
 
       // 2. Fetch submissions
-      let query = supabase.from("clearance_items").select("*").order("created_at", { ascending: false });
-      if (role !== "admin") {
-        query = query.eq("student_id", user?.id);
+      let query = supabase.from("clearance_items").select("*");
+      if (role === "admin") {
+        query = query.order("created_at", { ascending: false });
+      } else if (role === "hall_admin") {
+        const myHostelId = user?.user_metadata?.hostel_id || (user as any)?.hostel_id;
+        query = query.eq("hostel_id", myHostelId).order("created_at", { ascending: false });
+      } else {
+        query = query.eq("student_id", user?.id).order("created_at", { ascending: false });
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -136,7 +141,7 @@ export default function Clearance() {
         .maybeSingle();
       
       const r_num = (alloc as any)?.rooms?.room_number || "Unknown";
-      const h_id = (alloc as any)?.rooms?.blocks?.hostel_id || null; // Mock may not resolve deeply, but let's try
+      const h_id = (alloc as any)?.rooms?.blocks?.hostels?.id || null;
       
       const { error } = await supabase.from("clearance_items").insert({
         student_id: user?.id,
@@ -146,7 +151,7 @@ export default function Clearance() {
         status: "pending",
         room_number: r_num,
         matric_number: user?.user_metadata?.matric_number || "N/A",
-        hostel_id: user?.user_metadata?.hostel_id || h_id
+        hostel_id: h_id || user?.user_metadata?.hostel_id
       });
       if (error) throw error;
       

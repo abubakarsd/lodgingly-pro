@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Send, MessageSquare } from "lucide-react";
+import { Navigate } from "react-router-dom";
 
 type MessageRecord = {
   id: string;
@@ -22,16 +23,21 @@ type MessageRecord = {
 };
 
 export default function Messages() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [messages, setMessages] = useState<MessageRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [messageText, setMessageText] = useState("");
+  const [chatRoomId, setChatRoomId] = useState<string | null>(null);
   const feedEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    void load();
-  }, []);
+    if (user && role !== "admin") void load();
+  }, [user, role]);
+
+  if (role === "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   useEffect(() => {
     feedEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -40,11 +46,27 @@ export default function Messages() {
   async function load() {
     setLoading(true);
     try {
-      // Fetch messages from global room 'general-board'
+      let roomId = "";
+      if (role === "hall_admin") {
+        const myHostelId = user?.user_metadata?.hostel_id || (user as any)?.hostel_id;
+        roomId = `hostel-${myHostelId}`;
+      } else {
+        const { data: alloc } = await supabase
+          .from("allocations")
+          .select("rooms")
+          .eq("student_id", user?.id)
+          .eq("status", "active")
+          .maybeSingle();
+        const h_id = (alloc as any)?.rooms?.blocks?.hostels?.id;
+        if (!h_id) throw new Error("You must have an active allocation to view messages.");
+        roomId = `hostel-${h_id}`;
+      }
+      setChatRoomId(roomId);
+
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .eq("room_id", "general-board")
+        .eq("room_id", roomId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -58,11 +80,11 @@ export default function Messages() {
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!messageText.trim() || !user) return;
+    if (!messageText.trim() || !user || !chatRoomId) return;
     setSending(true);
     try {
       const { error } = await supabase.from("messages").insert({
-        room_id: "general-board",
+        room_id: chatRoomId,
         sender_id: user.id,
         body: messageText.trim(),
       });
@@ -84,8 +106,8 @@ export default function Messages() {
           <div className="px-6 py-4 border-b border-border bg-surface/50 flex items-center gap-3">
             <MessageSquare className="size-5 text-leaf-700" />
             <div>
-              <h3 className="font-semibold text-sm">General Discussion Channel</h3>
-              <p className="text-xs text-muted-foreground">Announcements and discussions open to all students and staff.</p>
+              <h3 className="font-semibold text-sm">Hostel Discussion Channel</h3>
+              <p className="text-xs text-muted-foreground">Announcements and discussions for your hostel.</p>
             </div>
           </div>
 

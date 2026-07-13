@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Bed, Building2, Users, Wrench } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
 
 type Stat = { label: string; value: string; hint?: string; Icon: any };
 
@@ -14,6 +14,10 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stat[]>([]);
   const [occupancy, setOccupancy] = useState<{ name: string; Occupied: number; Available: number }[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
+  
+  const [payments, setPayments] = useState<{ name: string; value: number }[]>([]);
+  const [genders, setGenders] = useState<{ name: string; value: number }[]>([]);
+  const [departments, setDepartments] = useState<{ name: string; value: number }[]>([]);
 
   useEffect(() => { if (user) void load(); }, [user]);
 
@@ -64,7 +68,32 @@ export default function AdminDashboard() {
     });
     setOccupancy(occupancyData);
     setComplaints(comps.data ?? []);
+
+    // Calculate Payments, Genders, Departments
+    let paid = 0, notPaid = 0;
+    const genderCount: Record<string, number> = { male: 0, female: 0, mixed: 0 };
+    const deptCount: Record<string, number> = {};
+
+    (alloc.data ?? []).forEach((a: any) => {
+      if (a.payment_status === 'paid') paid++;
+      else notPaid++;
+
+      const g = a.rooms?.blocks?.hostels?.gender || 'unknown';
+      genderCount[g] = (genderCount[g] || 0) + 1;
+
+      const p = a.student_id?.program || 'Unknown';
+      deptCount[p] = (deptCount[p] || 0) + 1;
+    });
+
+    setPayments([
+      { name: 'Paid', value: paid },
+      { name: 'Unpaid', value: notPaid }
+    ]);
+    setGenders(Object.entries(genderCount).filter(([_, v]) => v > 0).map(([k, v]) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), value: v })));
+    setDepartments(Object.entries(deptCount).map(([k, v]) => ({ name: k, value: v })).sort((a, b) => b.value - a.value).slice(0, 5));
   }
+
+  const COLORS = ['#15803d', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6'];
 
   return (
     <AppShell title="Admin Overview">
@@ -123,6 +152,64 @@ export default function AdminDashboard() {
               ))}
               {complaints.length === 0 && <p className="text-sm text-muted-foreground py-4">No complaints yet.</p>}
             </ul>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-12 gap-6 mt-6">
+          {/* Payment Status */}
+          <Card className="col-span-12 md:col-span-4 p-6">
+            <h3 className="font-semibold text-lg mb-4">Payment Status</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={payments} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {payments.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.name === 'Paid' ? '#15803d' : '#ef4444'} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          {/* Gender Demographics */}
+          <Card className="col-span-12 md:col-span-4 p-6">
+            <h3 className="font-semibold text-lg mb-4">Demographics by Gender</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={genders} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {genders.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          {/* Top Departments */}
+          <Card className="col-span-12 md:col-span-4 p-6">
+            <h3 className="font-semibold text-lg mb-4">Top Departments</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={departments} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 10}} tickLine={false} axisLine={false} />
+                  <Tooltip cursor={{ fill: "transparent" }} />
+                  <Bar dataKey="value" fill="#15803d" radius={[0, 4, 4, 0]}>
+                    {departments.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </Card>
         </div>
       </div>

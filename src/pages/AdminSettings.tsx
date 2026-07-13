@@ -44,8 +44,7 @@ export default function AdminSettings() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [matricNumber, setMatricNumber] = useState("");
-  const [userRole, setUserRole] = useState<"student" | "admin" | "hall_admin">("student");
+  const [userRole, setUserRole] = useState<"admin" | "hall_admin">("hall_admin");
 
   if (role !== "admin" && role !== "hall_admin") {
     return <Navigate to="/dashboard" replace />;
@@ -98,14 +97,29 @@ export default function AdminSettings() {
     }
   }
 
+  function generatePassword(role: string) {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let rand = "";
+    for (let i = 0; i < 6; i++) {
+      rand += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return role === "admin" ? `admin${rand}` : `hall${rand}`;
+  }
+
   function handleOpenCreate() {
     setEditingId(null);
     setEmail("");
-    setPassword("");
+    setUserRole("hall_admin");
+    setPassword(generatePassword("hall_admin"));
     setFullName("");
-    setMatricNumber("");
-    setUserRole("student");
     setDialogOpen(true);
+  }
+
+  function handleRoleChange(newRole: "admin" | "hall_admin") {
+    setUserRole(newRole);
+    if (!editingId) {
+      setPassword(generatePassword(newRole));
+    }
   }
 
   function handleOpenEdit(userRecord: Profile) {
@@ -113,8 +127,7 @@ export default function AdminSettings() {
     setEmail(userRecord.email || "");
     setPassword(""); // Keep blank to not modify
     setFullName(userRecord.full_name || "");
-    setMatricNumber(userRecord.matric_number || "");
-    setUserRole(userRecord.role);
+    setUserRole(userRecord.role === "student" ? "hall_admin" : userRecord.role);
     setDialogOpen(true);
   }
 
@@ -127,7 +140,6 @@ export default function AdminSettings() {
         const payload: any = {
           email,
           full_name: fullName,
-          matric_number: matricNumber || null,
           role: userRole,
         };
         // Update password if present
@@ -148,7 +160,6 @@ export default function AdminSettings() {
             email, 
             fullName, 
             password, 
-            matricNumber: matricNumber || undefined,
             role: userRole
           })
         });
@@ -323,30 +334,26 @@ export default function AdminSettings() {
                   <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Password {editingId && "(leave blank to keep current)"}</Label>
+                  <Label>Password {editingId ? "(leave blank to keep current)" : "(auto-generated)"}</Label>
                   <Input
-                    type="password"
+                    type="text"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required={!editingId}
+                    readOnly={!editingId}
+                    className={!editingId ? "bg-muted font-mono" : ""}
                   />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Matric Number</Label>
-                  <Input
-                    placeholder="e.g. U16CSC206 (optional)"
-                    value={matricNumber}
-                    onChange={(e) => setMatricNumber(e.target.value)}
-                  />
+                  {!editingId && (
+                    <p className="text-xs text-muted-foreground">Copy this temporary password and give it to the user.</p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label>Account Role</Label>
-                  <Select value={userRole} onValueChange={(v: any) => setUserRole(v)}>
+                  <Select value={userRole} onValueChange={(v: any) => handleRoleChange(v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="hall_admin">Hall Admin</SelectItem>
                       <SelectItem value="admin">Ultimate Admin</SelectItem>
                     </SelectContent>

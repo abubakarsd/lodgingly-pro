@@ -12,7 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { CheckCircle2, AlertCircle, HelpCircle, Loader2, Plus, FileText, Image as ImageIcon, Paperclip } from "lucide-react";
+import { CheckCircle2, AlertCircle, HelpCircle, Loader2, Plus, FileText, Image as ImageIcon, Paperclip, Pencil, Trash } from "lucide-react";
 
 type ClearanceRequirement = {
   id: string;
@@ -62,8 +62,9 @@ export default function Clearance() {
   const [selectedReqId, setSelectedReqId] = useState<string>("");
   const [attachmentBase64, setAttachmentBase64] = useState<string>("");
   
-  // Admin add requirement states
+  // Admin add/edit requirement states
   const [addingReq, setAddingReq] = useState(false);
+  const [editingReqId, setEditingReqId] = useState<string | null>(null);
   const [newReqName, setNewReqName] = useState("");
   const [newReqDesc, setNewReqDesc] = useState("");
   const [newReqRequiresFile, setNewReqRequiresFile] = useState(false);
@@ -165,24 +166,59 @@ export default function Clearance() {
     if (!newReqName.trim()) return;
     setAddingReq(true);
     try {
-      const { error } = await supabase.from("clearance_requirements").insert({
+      const payload = {
         name: newReqName.trim(),
         description: newReqDesc.trim(),
         requires_file: newReqRequiresFile,
         file_type: newReqRequiresFile ? newReqFileType : "any"
-      });
-      if (error) throw error;
+      };
+
+      if (editingReqId) {
+        const { error } = await supabase.from("clearance_requirements").update(payload).eq("id", editingReqId);
+        if (error) throw error;
+        toast({ title: "Requirement updated" });
+      } else {
+        const { error } = await supabase.from("clearance_requirements").insert(payload);
+        if (error) throw error;
+        toast({ title: "Requirement added" });
+      }
       
-      toast({ title: "Requirement added" });
       setNewReqName("");
       setNewReqDesc("");
       setNewReqRequiresFile(false);
       setNewReqFileType("any");
+      setEditingReqId(null);
       void load();
     } catch (err: any) {
-      toast({ title: "Failed to add requirement", description: err.message, variant: "destructive" });
+      toast({ title: "Failed to save requirement", description: err.message, variant: "destructive" });
     } finally {
       setAddingReq(false);
+    }
+  }
+
+  function handleEditRequirement(r: ClearanceRequirement) {
+    setEditingReqId(r.id);
+    setNewReqName(r.name);
+    setNewReqDesc(r.description);
+    setNewReqRequiresFile(r.requires_file);
+    setNewReqFileType(r.file_type);
+  }
+
+  async function handleDeleteRequirement(id: string) {
+    if (!confirm("Are you sure you want to delete this requirement?")) return;
+    try {
+      const { error } = await supabase.from("clearance_requirements").delete().eq("id", id);
+      if (error) throw error;
+      toast({ title: "Requirement deleted" });
+      if (editingReqId === id) {
+        setEditingReqId(null);
+        setNewReqName("");
+        setNewReqDesc("");
+        setNewReqRequiresFile(false);
+      }
+      void load();
+    } catch (err: any) {
+      toast({ title: "Failed to delete requirement", description: err.message, variant: "destructive" });
     }
   }
 
@@ -325,8 +361,18 @@ export default function Clearance() {
             
             {/* Admin Left: Manage Requirements */}
             <Card className="col-span-12 md:col-span-5 lg:col-span-4 p-6 self-start">
-              <h3 className="font-semibold text-lg">Add Requirement</h3>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">Define a new clearance rule.</p>
+              <div className="flex justify-between items-center mb-1">
+                <h3 className="font-semibold text-lg">{editingReqId ? "Edit Requirement" : "Add Requirement"}</h3>
+                {editingReqId && (
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setEditingReqId(null);
+                    setNewReqName("");
+                    setNewReqDesc("");
+                    setNewReqRequiresFile(false);
+                  }}>Cancel</Button>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">Define a new clearance rule.</p>
               
               <form onSubmit={handleAddRequirement} className="space-y-4">
                 <div className="space-y-2">
@@ -357,8 +403,8 @@ export default function Clearance() {
                 )}
                 
                 <Button type="submit" className="w-full" disabled={addingReq}>
-                  {addingReq ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Plus className="size-4 mr-2" />}
-                  Create Requirement
+                  {addingReq ? <Loader2 className="size-4 mr-2 animate-spin" /> : editingReqId ? <Pencil className="size-4 mr-2" /> : <Plus className="size-4 mr-2" />}
+                  {editingReqId ? "Update Requirement" : "Create Requirement"}
                 </Button>
               </form>
 
@@ -367,12 +413,21 @@ export default function Clearance() {
                   <h4 className="font-medium text-sm mb-3">Active Requirements</h4>
                   <div className="space-y-2">
                     {requirements.map(r => (
-                      <div key={r.id} className="p-3 bg-surface border rounded-lg text-sm">
-                        <div className="font-medium flex justify-between items-start">
+                      <div key={r.id} className="p-3 bg-surface border rounded-lg text-sm group relative">
+                        <div className="font-medium flex justify-between items-start pr-12">
                           <span>{r.name}</span>
                           {r.requires_file && <span className="text-[10px] uppercase font-bold text-leaf-600 bg-leaf-50 px-1.5 py-0.5 rounded tracking-wide">Upload ({r.file_type})</span>}
                         </div>
-                        {r.description && <p className="text-muted-foreground mt-1 text-xs">{r.description}</p>}
+                        {r.description && <p className="text-muted-foreground mt-1 text-xs pr-12">{r.description}</p>}
+                        
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex bg-surface shadow-sm rounded-md border">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditRequirement(r)}>
+                            <Pencil className="size-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleDeleteRequirement(r.id)}>
+                            <Trash className="size-3" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

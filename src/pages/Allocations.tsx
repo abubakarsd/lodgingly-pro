@@ -41,14 +41,14 @@ type AllocationRecord = {
 };
 
 export default function Allocations() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [allocations, setAllocations] = useState<AllocationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Redirect if not admin
-  if (role !== "admin") {
+  // Redirect if not admin or hall admin
+  if (role !== "admin" && role !== "hall_admin") {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -61,7 +61,15 @@ export default function Allocations() {
     try {
       const { data, error } = await supabase.from("allocations").select("*").order("allocated_at", { ascending: false });
       if (error) throw error;
-      setAllocations((data as any) ?? []);
+      
+      let items = (data as any) ?? [];
+      
+      if (role === "hall_admin") {
+        const myHostelId = user?.user_metadata?.hostel_id || (user as any)?.hostel_id;
+        items = items.filter((a: any) => a.rooms?.blocks?.hostels?.id === myHostelId);
+      }
+      
+      setAllocations(items);
     } catch (err: any) {
       toast({ title: "Failed to load allocations", description: err.message, variant: "destructive" });
     } finally {

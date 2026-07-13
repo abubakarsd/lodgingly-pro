@@ -360,9 +360,8 @@ export default function Clearance() {
           <div className="grid grid-cols-12 gap-6">
             
             {/* Admin Left: Manage Requirements */}
-            <Card className="col-span-12 md:col-span-5 lg:col-span-4 p-6 self-start">
-              {role === "admin" && (
-                <>
+            {role === "admin" && (
+              <Card className="col-span-12 md:col-span-5 lg:col-span-4 p-6 self-start">
                   <div className="flex justify-between items-center mb-1">
                     <h3 className="font-semibold text-lg">{editingReqId ? "Edit Requirement" : "Add Requirement"}</h3>
                     {editingReqId && (
@@ -409,8 +408,6 @@ export default function Clearance() {
                       {editingReqId ? "Update Requirement" : "Create Requirement"}
                     </Button>
                   </form>
-                </>
-              )}
 
               {requirements.length > 0 && (
                 <div className={role === "admin" ? "mt-8" : ""}>
@@ -440,9 +437,10 @@ export default function Clearance() {
                 </div>
               )}
             </Card>
+            )}
 
             {/* Admin Right: Submissions Queue */}
-            <Card className="col-span-12 md:col-span-7 lg:col-span-8 p-6">
+            <Card className={`col-span-12 ${role === "admin" ? "md:col-span-7 lg:col-span-8" : ""} p-6`}>
               <h3 className="font-semibold text-lg">Clearance Submissions</h3>
               <p className="text-sm text-muted-foreground mt-1 mb-6">Click on a submission to view details and attachments.</p>
 
